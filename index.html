@@ -95,6 +95,14 @@
     .color-picker { display:flex; gap:9px; flex-wrap:wrap; }
     .color-swatch { width:30px; height:30px; border-radius:50%; cursor:pointer; border:3px solid transparent; transition:all 0.15s; flex-shrink:0; }
     .color-swatch.selected { border-color:#fff; box-shadow:0 0 0 2px rgba(255,255,255,0.3); transform:scale(1.1); }
+    .color-dropdown-btn { display:flex; align-items:center; gap:9px; background:var(--bg3); border:1px solid var(--border); border-radius:var(--radius-sm); padding:9px 12px; cursor:pointer; width:100%; position:relative; }
+    .color-dropdown-btn:hover { border-color:var(--border2); }
+    .color-dropdown-panel { position:absolute; top:calc(100% + 6px); left:0; right:0; background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:12px; z-index:200; display:flex; flex-wrap:wrap; gap:10px; box-shadow:0 8px 24px rgba(0,0,0,0.5); animation:fadeIn 0.1s; }
+    .color-opt { width:28px; height:28px; border-radius:50%; border:2px solid transparent; transition:all 0.15s; flex-shrink:0; }
+    .color-opt.available { cursor:pointer; }
+    .color-opt.available:hover { transform:scale(1.15); }
+    .color-opt.selected { border-color:#fff; box-shadow:0 0 0 2px rgba(255,255,255,0.3); cursor:pointer; }
+    .color-opt.taken { opacity:0.2; cursor:not-allowed; }
     .absence-tag { display:inline-flex; align-items:center; gap:5px; background:var(--bg3); border:1px solid var(--border); border-radius:8px; padding:5px 9px; font-size:12px; margin:3px 3px 3px 0; }
     .tag-del { cursor:pointer; color:var(--text2); transition:color 0.1s; padding:0 1px; }
     .tag-del:hover { color:var(--danger); }
@@ -526,6 +534,43 @@ function WGEinkaufe({members,purchases,setPurchases}) {
   </div>;
 }
 
+/* ═══ COLOR DROPDOWN ═══ */
+function ColorDropdown({value, takenColors, onChange}) {
+  const [open, setOpen] = React.useState(false);
+  const ref = React.useRef(null);
+
+  React.useEffect(() => {
+    function handleClick(e) {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  return (
+    <div style={{position:'relative'}} ref={ref}>
+      <div className="color-dropdown-btn" onClick={()=>setOpen(o=>!o)}>
+        <div style={{width:22,height:22,borderRadius:'50%',background:value,flexShrink:0,border:'2px solid rgba(255,255,255,0.2)'}}/>
+        <span style={{flex:1,fontSize:13,color:'var(--text2)'}}>Farbe wählen</span>
+        <span style={{color:'var(--text3)',fontSize:12}}>{open?'▲':'▼'}</span>
+      </div>
+      {open && <div className="color-dropdown-panel">
+        {COLORS.map(c => {
+          const isTaken = takenColors.includes(c) && c !== value;
+          const isSelected = c === value;
+          return <div
+            key={c}
+            className={`color-opt ${isSelected?'selected':isTaken?'taken':'available'}`}
+            style={{background:c}}
+            title={isTaken?'Bereits vergeben':''}
+            onClick={()=>{ if(!isTaken){onChange(c);setOpen(false);} }}
+          />;
+        })}
+      </div>}
+    </div>
+  );
+}
+
 /* ═══ BEWOHNER ═══ */
 function Bewohner({members,setMembers}) {
   const [showAdd,setShowAdd] = useState(false);
@@ -569,12 +614,11 @@ function Bewohner({members,setMembers}) {
         </div>
         <button onClick={()=>remove(member.id)} style={{background:'none',border:'1px solid var(--danger)',borderRadius:7,cursor:'pointer',color:'var(--danger)',fontSize:12,padding:'5px 10px',fontFamily:'DM Sans'}}>Ausziehen</button>
       </div>
-      <div style={{marginBottom:14}}>
-        <label>Farbe</label>
-        <div className="color-picker">
-          {COLORS.map(c=><div key={c} className={`color-swatch ${member.color===c?'selected':''}`} style={{background:c}} onClick={()=>update(member.id,{color:c})}/>)}
-        </div>
-      </div>
+      <ColorDropdown
+        value={member.color}
+        takenColors={members.filter(m=>m.id!==member.id).map(m=>m.color)}
+        onChange={c=>update(member.id,{color:c})}
+      />
       <div style={{marginBottom:14}}>
         <label>IBAN (optional)</label>
         <input placeholder="DE00 0000 0000 0000 0000 00" value={member.iban||''} onChange={e=>update(member.id,{iban:e.target.value})}/>
@@ -602,7 +646,11 @@ function Bewohner({members,setMembers}) {
       </div>
       <div className="form-group">
         <label>Farbe wählen</label>
-        <div className="color-picker">{COLORS.map(c=><div key={c} className={`color-swatch ${newColor===c?'selected':''}`} style={{background:c}} onClick={()=>setNewColor(c)}/>)}</div>
+        <ColorDropdown
+          value={newColor}
+          takenColors={members.map(m=>m.color)}
+          onChange={setNewColor}
+        />
       </div>
       <div className="flex gap-2 mt-3">
         <button className="btn btn-ghost flex-1" onClick={()=>setShowAdd(false)}>Abbrechen</button>
