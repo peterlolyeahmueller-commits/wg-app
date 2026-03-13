@@ -222,10 +222,10 @@ const DEFAULT_MEMBERS = [
   {id:'m4',name:'Mia', color:'#10b981',iban:'',absences:[]},
 ];
 const DEFAULT_JOBS = [
-  {id:'j1',name:'🍳 Küche',  description:'Herd, Arbeitsflächen und Spüle reinigen, Boden wischen', tasks:['Herd abwischen','Arbeitsflächen reinigen','Spüle putzen','Boden wischen']},
-  {id:'j2',name:'🚿 Bad',    description:'WC, Waschbecken, Dusche und Spiegel reinigen',            tasks:['WC reinigen','Waschbecken putzen','Dusche schrubben','Spiegel wischen']},
-  {id:'j3',name:'🚪 Flur',   description:'Flur und Eingangsbereich saugen und wischen',             tasks:['Saugen','Wischen','Eingang sauber halten']},
-  {id:'j4',name:'🗑️ Müll',   description:'Müll rausbringen und Eimer leeren',                      tasks:['Restmüll','Biomüll','Papiermüll','Gelber Sack']},
+  {id:'j1',name:'🍳 Küche',  tasks:['Herd abwischen','Arbeitsflächen reinigen','Spüle putzen','Boden wischen']},
+  {id:'j2',name:'🚿 Bad',    tasks:['WC reinigen','Waschbecken putzen','Dusche schrubben','Spiegel wischen']},
+  {id:'j3',name:'🚪 Flur',   tasks:['Saugen','Wischen','Eingang sauber halten']},
+  {id:'j4',name:'🗑️ Müll',   tasks:['Restmüll','Biomüll','Papiermüll','Gelber Sack']},
 ];
 
 /* ═══ ROTATION ═══ */
@@ -399,7 +399,6 @@ function Putzplan({members,jobs,cleaningDone,setCleaningDone}) {
             <CheckBox checked={done} onChange={()=>toggle(a.jobId)} color={member.color}/>
             <div style={{flex:1}}>
               <div style={{fontSize:15,fontWeight:500,textDecoration:done?'line-through':'none',color:done?'var(--text2)':'var(--text)'}}>{job.name}</div>
-              <div style={{fontSize:12,color:'var(--text2)',marginTop:2}}>{job.description}</div>
             </div>
             <Avatar member={member} size={30}/>
           </div>;
@@ -634,8 +633,8 @@ function Jobs({jobs,setJobs}) {
   function add() {
     if(!newName.trim()) return;
     const id=uid();
-    setJobs(prev=>[...prev,{id,name:newName.trim(),description:newDesc.trim(),tasks:[]}]);
-    setExpanded(id); setNewName(''); setNewDesc(''); setShowAdd(false);
+    setJobs(prev=>[...prev,{id,name:newName.trim(),tasks:[]}]);
+    setExpanded(id); setNewName(''); setShowAdd(false);
   }
   function del(id) { if(confirm('Job wirklich löschen?')){setJobs(prev=>prev.filter(j=>j.id!==id));if(expanded===id)setExpanded(null);} }
   function update(id,changes) { setJobs(prev=>prev.map(j=>j.id===id?{...j,...changes}:j)); }
@@ -669,7 +668,6 @@ function Jobs({jobs,setJobs}) {
         </div>
         {isOpen&&<div className="job-card-body">
           <div className="form-group"><label>Name</label><input value={job.name} onChange={e=>update(job.id,{name:e.target.value})} placeholder="z.B. 🍳 Küche"/></div>
-          <div className="form-group"><label>Beschreibung</label><textarea rows={2} value={job.description} onChange={e=>update(job.id,{description:e.target.value})} placeholder="Was gehört zu diesem Job?"/></div>
           <div>
             <label>Aufgaben</label>
             {(job.tasks||[]).map((task,i)=><div key={i} style={{display:'flex',alignItems:'center',gap:8,padding:'7px 0',borderBottom:'1px solid var(--border)'}}>
@@ -687,7 +685,6 @@ function Jobs({jobs,setJobs}) {
     })}
     {showAdd&&<Modal title="💼 Neuer Job" onClose={()=>setShowAdd(false)}>
       <div className="form-group"><label>Name</label><input autoFocus placeholder="z.B. 🍳 Küche" value={newName} onChange={e=>setNewName(e.target.value)} onKeyDown={e=>e.key==='Enter'&&add()}/></div>
-      <div className="form-group"><label>Beschreibung</label><textarea rows={2} placeholder="Was beinhaltet dieser Job?" value={newDesc} onChange={e=>setNewDesc(e.target.value)}/></div>
       <div className="flex gap-2 mt-3">
         <button className="btn btn-ghost flex-1" onClick={()=>setShowAdd(false)}>Abbrechen</button>
         <button className="btn btn-primary flex-1" onClick={add}>Erstellen</button>
