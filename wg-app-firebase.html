@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>🏠 WG Eifelwall</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+  <!-- Firebase compat SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+  <!-- React -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:#0e0e0e; --bg2:#181818; --bg3:#222222;
+      --border:#2c2c2c; --border2:#383838;
+      --text:#f0ede8; --text2:#888; --text3:#555;
+      --accent:#f59e0b; --accent2:#d97706;
+      --success:#22c55e; --danger:#ef4444;
+      --radius:14px; --radius-sm:9px;
+    }
+    html,body { height:100%; }
+    body {
+      background:var(--bg); color:var(--text);
+      font-family:'DM Sans',sans-serif;
+      overflow-x:hidden; -webkit-tap-highlight-color:transparent;
+    }
+    #root { min-height:100%; display:flex; flex-direction:column; max-width:500px; margin:0 auto; }
+    ::-webkit-scrollbar { width:3px; }
+    ::-webkit-scrollbar-thumb { background:var(--border2); border-radius:2px; }
+    .font-syne { font-family:'Syne',sans-serif; }
+    .app-header {
+      padding:20px 20px 12px; display:flex; align-items:center; justify-content:space-between;
+      position:sticky; top:0; z-index:50; background:var(--bg); border-bottom:1px solid var(--border);
+    }
+    .app-logo { font-family:'Syne',sans-serif; font-weight:800; font-size:20px; color:var(--accent); letter-spacing:-0.3px; }
+    .app-date { font-size:12px; color:var(--text2); }
+    .content { flex:1; padding:18px 18px 110px; overflow-y:auto; }
+    .bottom-nav {
+      position:fixed; bottom:0; left:50%; transform:translateX(-50%);
+      width:100%; max-width:500px; background:var(--bg2); border-top:1px solid var(--border);
+      display:flex; padding:10px 6px env(safe-area-inset-bottom,10px); z-index:100;
+    }
+    .nav-btn {
+      flex:1; display:flex; flex-direction:column; align-items:center; gap:3px;
+      background:none; border:none; color:var(--text3); cursor:pointer;
+      padding:6px 2px; border-radius:10px; transition:color 0.15s; font-family:'DM Sans',sans-serif;
+    }
+    .nav-btn.active { color:var(--accent); }
+    .nav-icon { font-size:22px; line-height:1; }
+    .nav-label { font-size:10px; font-weight:500; letter-spacing:0.2px; }
+    .card { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); padding:16px; margin-bottom:12px; }
+    .card-label { font-size:11px; font-weight:600; color:var(--text2); text-transform:uppercase; letter-spacing:0.8px; margin-bottom:12px; }
+    .btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:10px 18px; border-radius:var(--radius-sm); border:none; font-family:'DM Sans',sans-serif; font-size:14px; font-weight:500; cursor:pointer; transition:all 0.15s; white-space:nowrap; }
+    .btn-primary { background:var(--accent); color:#0a0a0a; font-weight:600; }
+    .btn-primary:hover { background:var(--accent2); }
+    .btn-primary:active { transform:scale(0.97); }
+    .btn-ghost { background:var(--bg3); color:var(--text); border:1px solid var(--border); }
+    .btn-ghost:hover { background:var(--border); }
+    .btn-sm { padding:7px 12px; font-size:13px; border-radius:8px; }
+    .btn-xs { padding:5px 9px; font-size:12px; border-radius:7px; }
+    input,textarea,select {
+      background:var(--bg3); border:1px solid var(--border); border-radius:var(--radius-sm);
+      color:var(--text); font-family:'DM Sans',sans-serif; font-size:14px; padding:10px 13px;
+      outline:none; width:100%; transition:border-color 0.15s; -webkit-appearance:none;
+    }
+    input:focus,textarea:focus,select:focus { border-color:var(--accent); }
+    input[type="date"] { color-scheme:dark; }
+    select option { background:var(--bg3); }
+    textarea { resize:none; }
+    label { display:block; font-size:12px; font-weight:500; color:var(--text2); margin-bottom:5px; }
+    .form-group { margin-bottom:14px; }
+    .avatar { border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700; color:#000; flex-shrink:0; font-family:'Syne',sans-serif; }
+    .check-box { width:24px; height:24px; border-radius:7px; border:2px solid var(--border2); display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; transition:all 0.15s; }
+    .check-box.checked { border-width:0; }
+    .check-tick { color:#000; font-size:13px; font-weight:800; }
+    .section-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+    .section-title { font-family:'Syne',sans-serif; font-size:22px; font-weight:800; letter-spacing:-0.5px; }
+    .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:300; display:flex; align-items:flex-end; animation:fadeIn 0.15s; }
+    @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+    .modal { background:var(--bg2); border-radius:22px 22px 0 0; padding:24px 20px 44px; width:100%; max-width:500px; margin:0 auto; border-top:1px solid var(--border); animation:slideUp 0.2s cubic-bezier(.16,1,.3,1); }
+    @keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
+    .modal-title { font-family:'Syne',sans-serif; font-size:19px; font-weight:700; margin-bottom:20px; }
+    .week-nav { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); padding:10px 14px; }
+    .week-label { font-family:'Syne',sans-serif; font-size:14px; font-weight:700; }
+    .icon-btn { background:var(--bg3); border:1px solid var(--border); color:var(--text); width:32px; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:14px; transition:all 0.15s; }
+    .icon-btn:hover { background:var(--border); }
+    .icon-btn:active { transform:scale(0.93); }
+    .tab-switch { display:flex; background:var(--bg3); border-radius:11px; padding:3px; margin-bottom:14px; border:1px solid var(--border); }
+    .tab-switch-btn { flex:1; padding:8px; border:none; border-radius:8px; background:transparent; color:var(--text2); font-family:'DM Sans',sans-serif; font-size:13px; font-weight:500; cursor:pointer; transition:all 0.15s; }
+    .tab-switch-btn.active { background:var(--bg2); color:var(--text); border:1px solid var(--border); }
+    .color-picker { display:flex; gap:9px; flex-wrap:wrap; }
+    .color-swatch { width:30px; height:30px; border-radius:50%; cursor:pointer; border:3px solid transparent; transition:all 0.15s; flex-shrink:0; }
+    .color-swatch.selected { border-color:#fff; box-shadow:0 0 0 2px rgba(255,255,255,0.3); transform:scale(1.1); }
+    .absence-tag { display:inline-flex; align-items:center; gap:5px; background:var(--bg3); border:1px solid var(--border); border-radius:8px; padding:5px 9px; font-size:12px; margin:3px 3px 3px 0; }
+    .tag-del { cursor:pointer; color:var(--text2); transition:color 0.1s; padding:0 1px; }
+    .tag-del:hover { color:var(--danger); }
+    .divider { height:1px; background:var(--border); margin:14px 0; }
+    .empty { text-align:center; padding:50px 20px; color:var(--text2); }
+    .empty-icon { font-size:44px; margin-bottom:12px; }
+    .empty-text { font-size:14px; }
+    .flex { display:flex; }
+    .flex-col { flex-direction:column; }
+    .items-center { align-items:center; }
+    .justify-between { justify-content:space-between; }
+    .gap-2 { gap:8px; }
+    .gap-3 { gap:12px; }
+    .flex-1 { flex:1; min-width:0; }
+    .mt-2 { margin-top:8px; }
+    .mt-3 { margin-top:14px; }
+    .text-sm { font-size:13px; }
+    .text-muted { color:var(--text2); }
+    .fw-600 { font-weight:600; }
+    .truncate { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .row-item { display:flex; align-items:center; gap:12px; padding:13px 0; border-bottom:1px solid var(--border); }
+    .row-item:last-child { border-bottom:none; padding-bottom:0; }
+    .row-item:first-child { padding-top:0; }
+    .job-card { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); margin-bottom:10px; overflow:hidden; }
+    .job-card-header { display:flex; align-items:center; gap:10px; padding:14px 16px; cursor:pointer; user-select:none; }
+    .job-card-body { padding:14px 16px; border-top:1px solid var(--border); background:rgba(0,0,0,0.15); }
+    .stats-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px; }
+    .stat-card { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); padding:14px; cursor:pointer; transition:border-color 0.15s; text-align:center; }
+    .stat-num { font-family:'Syne',sans-serif; font-weight:800; font-size:30px; line-height:1; margin-bottom:4px; }
+    .stat-label { font-size:11px; color:var(--text2); }
+    .month-week { padding:11px 0; border-bottom:1px solid var(--border); }
+    .month-week:last-child { border-bottom:none; }
+    .purchase-section-label { font-size:11px; font-weight:600; color:var(--text2); text-transform:uppercase; letter-spacing:0.8px; padding:10px 16px; background:rgba(0,0,0,0.2); border-bottom:1px solid var(--border); }
+    /* Sync indicator */
+    .sync-dot { width:7px; height:7px; border-radius:50%; background:var(--success); flex-shrink:0; }
+    .sync-dot.syncing { background:var(--accent); animation:pulse 1s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+    /* Loading screen */
+    .loading-screen { display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; gap:16px; }
+    .loading-spinner { width:36px; height:36px; border:3px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin 0.8s linear infinite; }
+    @keyframes spin { to{transform:rotate(360deg)} }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyDuj7xp5YSu_JDPIOlPhkClVsH3zM_T5Xs",
+    authDomain: "wg-eifelwall.firebaseapp.com",
+    databaseURL: "https://wg-eifelwall-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "wg-eifelwall",
+    storageBucket: "wg-eifelwall.firebasestorage.app",
+    messagingSenderId: "752381232126",
+    appId: "1:752381232126:web:bf1a0bae9004fbdb41f6af",
+    measurementId: "G-DDMEXMYCBG"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+</script>
+<script type="text/babel">
+const { useState, useEffect, useMemo, useRef } = React;
+
+/* ═══ UTILITIES ═══ */
+function getMonday(d) {
+  const date = new Date(d);
+  const day = date.getDay();
+  const diff = date.getDate() - day + (day === 0 ? -6 : 1);
+  date.setDate(diff); date.setHours(0,0,0,0); return date;
+}
+function addDays(d, n) { const r = new Date(d); r.setDate(r.getDate()+n); return r; }
+function getWeekKey(d) { return getMonday(d).toISOString().split('T')[0]; }
+function fmtShort(d) { return new Date(d).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'}); }
+function fmtMonthYear(d) { return new Date(d).toLocaleDateString('de-DE',{month:'long',year:'numeric'}); }
+function uid() { return Date.now().toString(36)+Math.random().toString(36).slice(2); }
+function weekNumber(weekKey) {
+  const d = new Date(weekKey);
+  const jan1 = new Date(d.getFullYear(),0,1);
+  return Math.ceil(((d-jan1)/86400000+jan1.getDay()+1)/7);
+}
+function isMemberAway(member, weekKey) {
+  const mon = new Date(weekKey), sun = addDays(mon,6);
+  return (member.absences||[]).some(a => { const f=new Date(a.from),t=new Date(a.to); return f<=sun&&t>=mon; });
+}
+
+/* ═══ FIREBASE HOOK ═══ */
+function useFirebase(path, defaultValue) {
+  const [value, setValue] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
+  const initialized = useRef(false);
+
+  useEffect(() => {
+    const ref = db.ref(path);
+    ref.on('value', snap => {
+      const data = snap.val();
+      if (data !== null) {
+        setValue(data);
+      } else if (!initialized.current) {
+        // First time: write defaults
+        ref.set(defaultValue);
+        setValue(defaultValue);
+      }
+      initialized.current = true;
+      setLoading(false);
+    });
+    return () => ref.off();
+  }, [path]);
+
+  const set = (updater) => {
+    setSyncing(true);
+    const newVal = typeof updater === 'function' ? updater(value) : updater;
+    db.ref(path).set(newVal).finally(() => setSyncing(false));
+  };
+
+  return [value ?? defaultValue, set, loading, syncing];
+}
+
+/* ═══ CONSTANTS ═══ */
+const COLORS = ['#f59e0b','#ef4444','#3b82f6','#10b981','#8b5cf6','#f97316','#06b6d4','#ec4899'];
+
+const DEFAULT_MEMBERS = [
+  {id:'m1',name:'Alex',color:'#f59e0b',iban:'',absences:[]},
+  {id:'m2',name:'Lena',color:'#ef4444',iban:'',absences:[]},
+  {id:'m3',name:'Tom', color:'#3b82f6',iban:'',absences:[]},
+  {id:'m4',name:'Mia', color:'#10b981',iban:'',absences:[]},
+];
+const DEFAULT_JOBS = [
+  {id:'j1',name:'🍳 Küche',  description:'Herd, Arbeitsflächen und Spüle reinigen, Boden wischen', tasks:['Herd abwischen','Arbeitsflächen reinigen','Spüle putzen','Boden wischen']},
+  {id:'j2',name:'🚿 Bad',    description:'WC, Waschbecken, Dusche und Spiegel reinigen',            tasks:['WC reinigen','Waschbecken putzen','Dusche schrubben','Spiegel wischen']},
+  {id:'j3',name:'🚪 Flur',   description:'Flur und Eingangsbereich saugen und wischen',             tasks:['Saugen','Wischen','Eingang sauber halten']},
+  {id:'j4',name:'🗑️ Müll',   description:'Müll rausbringen und Eimer leeren',                      tasks:['Restmüll','Biomüll','Papiermüll','Gelber Sack']},
+];
+
+/* ═══ ROTATION ═══ */
+function getAssignments(jobs, members, weekKey) {
+  const avail = members.filter(m => !isMemberAway(m, weekKey));
+  if (!avail.length || !jobs.length) return [];
+  const wn = weekNumber(weekKey);
+  return jobs.map((job,i) => ({jobId:job.id, memberId:avail[(wn+i)%avail.length].id}));
+}
+
+/* ═══ SHARED COMPONENTS ═══ */
+function Avatar({member, size=36}) {
+  return <div className="avatar" style={{width:size,height:size,background:member.color,fontSize:size*0.38}}>
+    {member.name.slice(0,1).toUpperCase()}
+  </div>;
+}
+
+function CheckBox({checked, onChange, color='var(--success)'}) {
+  return <div className={`check-box ${checked?'checked':''}`} style={checked?{background:color}:{}} onClick={onChange}>
+    {checked && <span className="check-tick">✓</span>}
+  </div>;
+}
+
+function Modal({title, onClose, children}) {
+  useEffect(() => {
+    const h = e => { if(e.key==='Escape') onClose(); };
+    document.addEventListener('keydown',h);
+    return ()=>document.removeEventListener('keydown',h);
+  },[onClose]);
+  return <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
+    <div className="modal">
+      <div className="flex items-center justify-between" style={{marginBottom:20}}>
+        <div className="modal-title" style={{margin:0}}>{title}</div>
+        <button onClick={onClose} style={{background:'none',border:'none',cursor:'pointer',color:'var(--text2)',fontSize:22,lineHeight:1}}>✕</button>
+      </div>
+      {children}
+    </div>
+  </div>;
+}
+
+/* ═══ DASHBOARD ═══ */
+function Dashboard({members,jobs,cleaningDone,purchases,setActiveTab}) {
+  const today = new Date();
+  const weekKey = getWeekKey(today);
+  const monday = new Date(weekKey), sunday = addDays(monday,6);
+  const assignments = useMemo(()=>getAssignments(jobs,members,weekKey),[jobs,members,weekKey]);
+  const awayNow = members.filter(m=>isMemberAway(m,weekKey));
+  const openP = purchases.filter(p=>!p.done);
+  const weekDone = cleaningDone[weekKey]||{};
+  const doneCount = Object.values(weekDone).filter(Boolean).length;
+  const total = assignments.length;
+  const allDone = total>0&&doneCount===total;
+  const hour = today.getHours();
+  const greet = hour<12?'Guten Morgen':hour<18?'Guten Tag':'Guten Abend';
+
+  return <div>
+    <div style={{marginBottom:18}}>
+      <div style={{fontSize:13,color:'var(--text2)',marginBottom:3}}>{greet} 👋</div>
+      <h2 style={{fontFamily:'Syne',fontWeight:800,fontSize:22,letterSpacing:'-0.5px'}}>{fmtShort(monday)} – {fmtShort(sunday)}</h2>
+    </div>
+    <div className="stats-grid">
+      <div className="stat-card" onClick={()=>setActiveTab('putzplan')}>
+        <div className="stat-num" style={{color:allDone?'var(--success)':'var(--accent)'}}>{doneCount}/{total}</div>
+        <div className="stat-label">Putzjobs</div>
+      </div>
+      <div className="stat-card" onClick={()=>setActiveTab('einkaufe')}>
+        <div className="stat-num" style={{color:openP.length>0?'var(--accent)':'var(--success)'}}>{openP.length}</div>
+        <div className="stat-label">Offene Überweisungen</div>
+      </div>
+    </div>
+    {assignments.length>0&&<div className="card">
+      <div className="card-label">Putzplan diese Woche</div>
+      {assignments.map(a=>{
+        const job=jobs.find(j=>j.id===a.jobId), member=members.find(m=>m.id===a.memberId);
+        const done=weekDone[a.jobId];
+        if(!job||!member) return null;
+        return <div key={a.jobId} className="row-item">
+          <div style={{width:4,height:36,borderRadius:4,background:done?'var(--success)':member.color,flexShrink:0}}/>
+          <div style={{flex:1}}>
+            <div style={{fontSize:14,fontWeight:500,textDecoration:done?'line-through':'none',color:done?'var(--text2)':'var(--text)'}}>{job.name}</div>
+          </div>
+          <div className="flex items-center gap-2">
+            {done&&<span style={{color:'var(--success)',fontSize:13}}>erledigt</span>}
+            <Avatar member={member} size={26}/>
+          </div>
+        </div>;
+      })}
+    </div>}
+    {awayNow.length>0&&<div className="card">
+      <div className="card-label">Diese Woche weg ✈️</div>
+      <div className="flex gap-2" style={{flexWrap:'wrap'}}>
+        {awayNow.map(m=><div key={m.id} style={{display:'flex',alignItems:'center',gap:8,background:'var(--bg3)',border:'1px solid var(--border)',borderRadius:10,padding:'7px 12px'}}>
+          <Avatar member={m} size={24}/><span style={{fontSize:13}}>{m.name}</span>
+        </div>)}
+      </div>
+    </div>}
+    {openP.length>0&&<div className="card" style={{cursor:'pointer'}} onClick={()=>setActiveTab('einkaufe')}>
+      <div className="card-label">Offene Überweisungen 💸</div>
+      {openP.slice(0,4).map(p=>{
+        const mem=members.find(m=>m.id===p.paidBy);
+        return <div key={p.id} className="row-item">
+          <div style={{flex:1}}>
+            <div style={{fontSize:14}}>{p.description}</div>
+            {mem&&<div style={{fontSize:12,color:'var(--text2)',marginTop:2}}>
+              <span style={{color:mem.color}}>{mem.name}</span> hat bezahlt
+              {mem.iban?<span> · {mem.iban}</span>:null}
+            </div>}
+          </div>
+          <div style={{fontFamily:'Syne',fontWeight:700,fontSize:15,color:'var(--accent)'}}>{p.amount}€</div>
+        </div>;
+      })}
+      {openP.length>4&&<div style={{fontSize:12,color:'var(--text2)',marginTop:8}}>+{openP.length-4} weitere →</div>}
+    </div>}
+    {total>0&&allDone&&openP.length===0&&awayNow.length===0&&<div style={{textAlign:'center',padding:'30px 20px'}}>
+      <div style={{fontSize:48}}>🎉</div>
+      <div style={{fontFamily:'Syne',fontWeight:700,fontSize:18,marginTop:10}}>Alles erledigt!</div>
+      <div style={{color:'var(--text2)',fontSize:13,marginTop:4}}>Die WG ist tip-top diese Woche.</div>
+    </div>}
+  </div>;
+}
+
+/* ═══ PUTZPLAN ═══ */
+function Putzplan({members,jobs,cleaningDone,setCleaningDone}) {
+  const [view,setView] = useState('woche');
+  const [weekKey,setWeekKey] = useState(getWeekKey(new Date()));
+  const monday = new Date(weekKey), sunday = addDays(monday,6);
+  const currentWeekKey = getWeekKey(new Date());
+  const isCurrentWeek = weekKey===currentWeekKey;
+  const assignments = useMemo(()=>getAssignments(jobs,members,weekKey),[jobs,members,weekKey]);
+  const weekDone = cleaningDone[weekKey]||{};
+  const awayThisWeek = members.filter(m=>isMemberAway(m,weekKey));
+
+  function toggle(jobId) {
+    setCleaningDone(prev=>({...prev,[weekKey]:{...(prev[weekKey]||{}),[jobId]:!(prev[weekKey]||{})[jobId]}}));
+  }
+
+  const monthWeeks = useMemo(()=>{
+    const d=new Date(weekKey), y=d.getFullYear(), mo=d.getMonth();
+    const first=new Date(y,mo,1), last=new Date(y,mo+1,0);
+    const weeks=[]; let cur=new Date(getMonday(first));
+    while(cur<=last){weeks.push(cur.toISOString().split('T')[0]);cur=addDays(cur,7);}
+    return weeks;
+  },[weekKey]);
+
+  return <div>
+    <div className="section-header">
+      <h2 className="section-title">Putzplan</h2>
+      {!isCurrentWeek&&<button className="btn btn-ghost btn-sm" onClick={()=>setWeekKey(getWeekKey(new Date()))}>Heute</button>}
+    </div>
+    <div className="tab-switch">
+      <button className={`tab-switch-btn ${view==='woche'?'active':''}`} onClick={()=>setView('woche')}>Woche</button>
+      <button className={`tab-switch-btn ${view==='monat'?'active':''}`} onClick={()=>setView('monat')}>Monat</button>
+    </div>
+    {view==='woche'?<>
+      <div className="week-nav">
+        <button className="icon-btn" onClick={()=>setWeekKey(getWeekKey(addDays(new Date(weekKey),-7)))}>←</button>
+        <div>
+          <div className="week-label">{fmtShort(monday)} – {fmtShort(sunday)}</div>
+          {isCurrentWeek&&<div style={{fontSize:10,color:'var(--accent)',textAlign:'center',marginTop:1}}>Diese Woche</div>}
+        </div>
+        <button className="icon-btn" onClick={()=>setWeekKey(getWeekKey(addDays(new Date(weekKey),7)))}>→</button>
+      </div>
+      {jobs.length===0?<div className="empty"><div className="empty-icon">💼</div><div className="empty-text">Lege zuerst Jobs an.</div></div>
+      :members.length===0?<div className="empty"><div className="empty-icon">👥</div><div className="empty-text">Füge Bewohner hinzu.</div></div>
+      :<div className="card" style={{padding:0,overflow:'hidden'}}>
+        {assignments.map((a,i)=>{
+          const job=jobs.find(j=>j.id===a.jobId), member=members.find(m=>m.id===a.memberId);
+          const done=weekDone[a.jobId]||false;
+          if(!job||!member) return null;
+          return <div key={a.jobId} style={{display:'flex',alignItems:'center',gap:14,padding:'15px 16px',borderBottom:i<assignments.length-1?'1px solid var(--border)':'none',background:done?'rgba(34,197,94,0.05)':'transparent',transition:'background 0.2s'}}>
+            <CheckBox checked={done} onChange={()=>toggle(a.jobId)} color={member.color}/>
+            <div style={{flex:1}}>
+              <div style={{fontSize:15,fontWeight:500,textDecoration:done?'line-through':'none',color:done?'var(--text2)':'var(--text)'}}>{job.name}</div>
+              <div style={{fontSize:12,color:'var(--text2)',marginTop:2}}>{job.description}</div>
+            </div>
+            <Avatar member={member} size={30}/>
+          </div>;
+        })}
+      </div>}
+      {awayThisWeek.length>0&&<div style={{marginTop:10,padding:'10px 14px',background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:10,display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
+        <span style={{fontSize:12,color:'var(--text2)'}}>✈️ Weg:</span>
+        {awayThisWeek.map(m=><span key={m.id} style={{fontSize:12,color:m.color,fontWeight:500}}>{m.name}</span>)}
+      </div>}
+    </>:<>
+      <div className="week-nav">
+        <button className="icon-btn" onClick={()=>{const d=new Date(weekKey);d.setMonth(d.getMonth()-1);setWeekKey(getWeekKey(d));}}>←</button>
+        <div className="week-label">{fmtMonthYear(weekKey)}</div>
+        <button className="icon-btn" onClick={()=>{const d=new Date(weekKey);d.setMonth(d.getMonth()+1);setWeekKey(getWeekKey(d));}}>→</button>
+      </div>
+      <div className="card" style={{padding:'4px 16px'}}>
+        {monthWeeks.map(wk=>{
+          const wkMon=new Date(wk), wkSun=addDays(wkMon,6);
+          const wkAssign=getAssignments(jobs,members,wk);
+          const wkDone=cleaningDone[wk]||{};
+          const dc=Object.values(wkDone).filter(Boolean).length;
+          const isCur=wk===currentWeekKey;
+          return <div key={wk} className="month-week">
+            <div className="flex items-center justify-between" style={{marginBottom:7}}>
+              <div style={{fontSize:13,fontWeight:600,color:isCur?'var(--accent)':'var(--text)',display:'flex',alignItems:'center',gap:6}}>
+                {isCur&&<span style={{width:6,height:6,borderRadius:'50%',background:'var(--accent)',display:'inline-block'}}/>}
+                {fmtShort(wkMon)} – {fmtShort(wkSun)}
+              </div>
+              <div style={{fontSize:11,color:'var(--text2)'}}>{dc}/{wkAssign.length}</div>
+            </div>
+            <div style={{display:'flex',flexWrap:'wrap',gap:5}}>
+              {wkAssign.map(a=>{
+                const job=jobs.find(j=>j.id===a.jobId), member=members.find(m=>m.id===a.memberId);
+                if(!job||!member) return null;
+                const done=(cleaningDone[wk]||{})[a.jobId];
+                return <div key={a.jobId} style={{display:'flex',alignItems:'center',gap:5,background:done?'rgba(34,197,94,0.1)':'var(--bg3)',border:`1px solid ${done?'rgba(34,197,94,0.25)':'var(--border)'}`,borderRadius:7,padding:'4px 9px'}}>
+                  <div style={{width:5,height:5,borderRadius:'50%',background:member.color,flexShrink:0}}/>
+                  <span style={{fontSize:11,color:done?'var(--text2)':'var(--text)'}}>{job.name.replace(/^\S+\s*/,'')}</span>
+                </div>;
+              })}
+              {wkAssign.length===0&&<span style={{fontSize:11,color:'var(--text3)'}}>Keine Jobs</span>}
+            </div>
+          </div>;
+        })}
+      </div>
+    </>}
+  </div>;
+}
+
+/* ═══ WG-EINKÄUFE ═══ */
+function WGEinkaufe({members,purchases,setPurchases}) {
+  const [showAdd,setShowAdd] = useState(false);
+  const [desc,setDesc] = useState('');
+  const [amount,setAmount] = useState('');
+  const [paidBy,setPaidBy] = useState('');
+  const open = purchases.filter(p=>!p.done);
+  const done = purchases.filter(p=>p.done);
+
+  function add() {
+    if(!desc.trim()||!amount||!paidBy) return;
+    const val=parseFloat(amount.replace(',','.'));
+    if(isNaN(val)||val<=0) return;
+    setPurchases(prev=>[{id:uid(),description:desc.trim(),amount:val.toFixed(2),paidBy,done:false,createdAt:new Date().toISOString()},...prev]);
+    setDesc(''); setAmount(''); setShowAdd(false);
+  }
+
+  function toggleDone(id) { setPurchases(prev=>prev.map(p=>p.id===id?{...p,done:!p.done}:p)); }
+  function del(id) { if(confirm('Eintrag löschen?')) setPurchases(prev=>prev.filter(p=>p.id!==id)); }
+
+  const PRow = ({p,isDone}) => {
+    const mem=members.find(m=>m.id===p.paidBy);
+    return <div style={{display:'flex',alignItems:'center',gap:12,padding:'13px 16px',opacity:isDone?0.55:1}}>
+      <CheckBox checked={isDone} onChange={()=>toggleDone(p.id)} color="var(--success)"/>
+      <div style={{flex:1,minWidth:0}}>
+        <div style={{fontSize:14,fontWeight:500,textDecoration:isDone?'line-through':'none',color:isDone?'var(--text2)':'var(--text)'}} className="truncate">{p.description}</div>
+        {mem&&<div style={{fontSize:12,color:'var(--text2)',marginTop:2}}>
+          <span style={{color:mem.color}}>{mem.name}</span> hat bezahlt
+          {mem.iban&&<span> · <span style={{userSelect:'all'}}>{mem.iban}</span></span>}
+        </div>}
+      </div>
+      <div style={{fontFamily:'Syne',fontWeight:700,fontSize:15,color:isDone?'var(--text2)':'var(--accent)',flexShrink:0}}>{p.amount}€</div>
+      <button onClick={()=>del(p.id)} style={{background:'none',border:'none',cursor:'pointer',color:'var(--text3)',fontSize:16,padding:'4px',flexShrink:0}}>✕</button>
+    </div>;
+  };
+
+  return <div>
+    <div className="section-header">
+      <h2 className="section-title">WG-Einkäufe</h2>
+      <button className="btn btn-primary btn-sm" onClick={()=>{setPaidBy(members[0]?.id||'');setShowAdd(true);}}>+ Eintrag</button>
+    </div>
+    {purchases.length===0?<div className="empty">
+      <div className="empty-icon">💸</div>
+      <div className="empty-text">Noch keine Einträge</div>
+      <button className="btn btn-primary" style={{marginTop:16}} onClick={()=>{setPaidBy(members[0]?.id||'');setShowAdd(true);}}>Ersten Eintrag erstellen</button>
+    </div>:<>
+      {open.length>0&&<div className="card" style={{padding:0,overflow:'hidden',marginBottom:14}}>
+        <div className="purchase-section-label">Offen — {open.length}</div>
+        {open.map((p,i)=><div key={p.id} style={{borderBottom:i<open.length-1?'1px solid var(--border)':'none'}}><PRow p={p} isDone={false}/></div>)}
+      </div>}
+      {done.length>0&&<div className="card" style={{padding:0,overflow:'hidden'}}>
+        <div className="purchase-section-label">Überwiesen — {done.length}</div>
+        {done.map((p,i)=><div key={p.id} style={{borderBottom:i<done.length-1?'1px solid var(--border)':'none'}}><PRow p={p} isDone={true}/></div>)}
+      </div>}
+    </>}
+    {showAdd&&<Modal title="💸 Neuer Eintrag" onClose={()=>setShowAdd(false)}>
+      <div className="form-group">
+        <label>Beschreibung</label>
+        <input autoFocus placeholder="z.B. Toilettenpapier, Spülmittel …" value={desc} onChange={e=>setDesc(e.target.value)} onKeyDown={e=>e.key==='Enter'&&add()}/>
+      </div>
+      <div className="form-group">
+        <label>Betrag (€)</label>
+        <input type="number" step="0.01" min="0.01" placeholder="0,00" value={amount} onChange={e=>setAmount(e.target.value)}/>
+      </div>
+      <div className="form-group">
+        <label>Wer hat bezahlt?</label>
+        <select value={paidBy} onChange={e=>setPaidBy(e.target.value)}>
+          {members.map(m=><option key={m.id} value={m.id}>{m.name}</option>)}
+        </select>
+      </div>
+      <div className="flex gap-2 mt-3">
+        <button className="btn btn-ghost flex-1" onClick={()=>setShowAdd(false)}>Abbrechen</button>
+        <button className="btn btn-primary flex-1" onClick={add}>Eintragen</button>
+      </div>
+    </Modal>}
+  </div>;
+}
+
+/* ═══ BEWOHNER ═══ */
+function Bewohner({members,setMembers}) {
+  const [showAdd,setShowAdd] = useState(false);
+  const [newName,setNewName] = useState('');
+  const [newColor,setNewColor] = useState(COLORS[0]);
+  const [absModalFor,setAbsModalFor] = useState(null);
+  const [absFrom,setAbsFrom] = useState('');
+  const [absTo,setAbsTo] = useState('');
+
+  function add() {
+    if(!newName.trim()) return;
+    const used=members.map(m=>m.color);
+    const color=COLORS.find(c=>!used.includes(c))||newColor;
+    setMembers(prev=>[...prev,{id:uid(),name:newName.trim(),color,iban:'',absences:[]}]);
+    setNewName(''); setShowAdd(false);
+  }
+  function remove(id) { if(confirm('Bewohner wirklich entfernen?')) setMembers(prev=>prev.filter(m=>m.id!==id)); }
+  function update(id,changes) { setMembers(prev=>prev.map(m=>m.id===id?{...m,...changes}:m)); }
+  function addAbsence(memberId) {
+    if(!absFrom||!absTo||absFrom>absTo) return;
+    setMembers(prev=>prev.map(m=>m.id===memberId?{...m,absences:[...(m.absences||[]),{id:uid(),from:absFrom,to:absTo}]}:m));
+    setAbsFrom(''); setAbsTo(''); setAbsModalFor(null);
+  }
+  function removeAbsence(memberId,absId) { setMembers(prev=>prev.map(m=>m.id===memberId?{...m,absences:m.absences.filter(a=>a.id!==absId)}:m)); }
+
+  return <div>
+    <div className="section-header">
+      <h2 className="section-title">Bewohner</h2>
+      <button className="btn btn-primary btn-sm" onClick={()=>setShowAdd(true)}>+ Einziehen</button>
+    </div>
+    {members.length===0&&<div className="empty"><div className="empty-icon">👥</div><div className="empty-text">Noch keine Bewohner</div></div>}
+    {members.map(member=><div key={member.id} className="card">
+      <div className="flex items-center gap-3" style={{marginBottom:14}}>
+        <Avatar member={member} size={48}/>
+        <div style={{flex:1}}>
+          <input value={member.name} onChange={e=>update(member.id,{name:e.target.value})}
+            style={{background:'transparent',border:'none',padding:0,fontSize:17,fontWeight:600,fontFamily:'Syne',color:'var(--text)',borderBottom:'1px solid transparent',borderRadius:0,width:'100%'}}
+            onFocus={e=>e.target.style.borderBottomColor='var(--accent)'}
+            onBlur={e=>e.target.style.borderBottomColor='transparent'}/>
+          <div style={{fontSize:12,color:'var(--text2)',marginTop:2}}>Bewohner</div>
+        </div>
+        <button onClick={()=>remove(member.id)} style={{background:'none',border:'1px solid var(--danger)',borderRadius:7,cursor:'pointer',color:'var(--danger)',fontSize:12,padding:'5px 10px',fontFamily:'DM Sans'}}>Ausziehen</button>
+      </div>
+      <div style={{marginBottom:14}}>
+        <label>Farbe</label>
+        <div className="color-picker">
+          {COLORS.map(c=><div key={c} className={`color-swatch ${member.color===c?'selected':''}`} style={{background:c}} onClick={()=>update(member.id,{color:c})}/>)}
+        </div>
+      </div>
+      <div style={{marginBottom:14}}>
+        <label>IBAN (optional)</label>
+        <input placeholder="DE00 0000 0000 0000 0000 00" value={member.iban||''} onChange={e=>update(member.id,{iban:e.target.value})}/>
+      </div>
+      <div>
+        <div className="flex items-center justify-between" style={{marginBottom:8}}>
+          <label style={{margin:0}}>Abwesenheiten</label>
+          <button className="btn btn-ghost btn-xs" onClick={()=>{setAbsModalFor(member.id);setAbsFrom('');setAbsTo('');}}>✈️ Urlaub eintragen</button>
+        </div>
+        <div>
+          {(member.absences||[]).length===0
+            ?<span style={{fontSize:12,color:'var(--text3)'}}>Keine Abwesenheiten</span>
+            :(member.absences||[]).map(abs=><div key={abs.id} className="absence-tag">
+                ✈️ {fmtShort(abs.from)} – {fmtShort(abs.to)}
+                <span className="tag-del" onClick={()=>removeAbsence(member.id,abs.id)}>✕</span>
+              </div>)
+          }
+        </div>
+      </div>
+    </div>)}
+    {showAdd&&<Modal title="🏠 Einziehen" onClose={()=>setShowAdd(false)}>
+      <div className="form-group">
+        <label>Name</label>
+        <input autoFocus placeholder="Name des neuen Mitbewohners" value={newName} onChange={e=>setNewName(e.target.value)} onKeyDown={e=>e.key==='Enter'&&add()}/>
+      </div>
+      <div className="form-group">
+        <label>Farbe wählen</label>
+        <div className="color-picker">{COLORS.map(c=><div key={c} className={`color-swatch ${newColor===c?'selected':''}`} style={{background:c}} onClick={()=>setNewColor(c)}/>)}</div>
+      </div>
+      <div className="flex gap-2 mt-3">
+        <button className="btn btn-ghost flex-1" onClick={()=>setShowAdd(false)}>Abbrechen</button>
+        <button className="btn btn-primary flex-1" onClick={add}>Einziehen</button>
+      </div>
+    </Modal>}
+    {absModalFor&&<Modal title="✈️ Urlaub eintragen" onClose={()=>setAbsModalFor(null)}>
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:14}}>
+        <div className="form-group" style={{margin:0}}><label>Von</label><input type="date" value={absFrom} onChange={e=>setAbsFrom(e.target.value)}/></div>
+        <div className="form-group" style={{margin:0}}><label>Bis</label><input type="date" value={absTo} onChange={e=>setAbsTo(e.target.value)} min={absFrom}/></div>
+      </div>
+      <div className="flex gap-2">
+        <button className="btn btn-ghost flex-1" onClick={()=>setAbsModalFor(null)}>Abbrechen</button>
+        <button className="btn btn-primary flex-1" onClick={()=>addAbsence(absModalFor)}>Speichern</button>
+      </div>
+    </Modal>}
+  </div>;
+}
+
+/* ═══ JOBS ═══ */
+function Jobs({jobs,setJobs}) {
+  const [expanded,setExpanded] = useState(null);
+  const [showAdd,setShowAdd] = useState(false);
+  const [newName,setNewName] = useState('');
+  const [newDesc,setNewDesc] = useState('');
+  const [newTask,setNewTask] = useState({});
+
+  function add() {
+    if(!newName.trim()) return;
+    const id=uid();
+    setJobs(prev=>[...prev,{id,name:newName.trim(),description:newDesc.trim(),tasks:[]}]);
+    setExpanded(id); setNewName(''); setNewDesc(''); setShowAdd(false);
+  }
+  function del(id) { if(confirm('Job wirklich löschen?')){setJobs(prev=>prev.filter(j=>j.id!==id));if(expanded===id)setExpanded(null);} }
+  function update(id,changes) { setJobs(prev=>prev.map(j=>j.id===id?{...j,...changes}:j)); }
+  function addTask(jobId) {
+    const t=(newTask[jobId]||'').trim();
+    if(!t) return;
+    setJobs(prev=>prev.map(j=>j.id===jobId?{...j,tasks:[...(j.tasks||[]),t]}:j));
+    setNewTask(prev=>({...prev,[jobId]:''}));
+  }
+  function removeTask(jobId,i) { setJobs(prev=>prev.map(j=>j.id===jobId?{...j,tasks:j.tasks.filter((_,idx)=>idx!==i)}:j)); }
+
+  return <div>
+    <div className="section-header">
+      <h2 className="section-title">Jobs</h2>
+      <button className="btn btn-primary btn-sm" onClick={()=>setShowAdd(true)}>+ Job</button>
+    </div>
+    <div style={{fontSize:13,color:'var(--text2)',marginBottom:14}}>Was zu jedem Putzjob gehört — von allen bearbeitbar.</div>
+    {jobs.length===0?<div className="empty">
+      <div className="empty-icon">💼</div><div className="empty-text">Noch keine Jobs</div>
+      <button className="btn btn-primary" style={{marginTop:16}} onClick={()=>setShowAdd(true)}>Ersten Job erstellen</button>
+    </div>:jobs.map(job=>{
+      const isOpen=expanded===job.id;
+      return <div key={job.id} className="job-card">
+        <div className="job-card-header" onClick={()=>setExpanded(isOpen?null:job.id)}>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontSize:15,fontWeight:600}} className="truncate">{job.name}</div>
+            <div style={{fontSize:12,color:'var(--text2)',marginTop:2}}>{(job.tasks||[]).length} Aufgabe{(job.tasks||[]).length!==1?'n':''}</div>
+          </div>
+          <button onClick={e=>{e.stopPropagation();del(job.id);}} style={{background:'none',border:'none',cursor:'pointer',color:'var(--text3)',fontSize:16,padding:'4px',marginRight:4}}>🗑️</button>
+          <span style={{color:'var(--text2)',fontSize:12}}>{isOpen?'▲':'▼'}</span>
+        </div>
+        {isOpen&&<div className="job-card-body">
+          <div className="form-group"><label>Name</label><input value={job.name} onChange={e=>update(job.id,{name:e.target.value})} placeholder="z.B. 🍳 Küche"/></div>
+          <div className="form-group"><label>Beschreibung</label><textarea rows={2} value={job.description} onChange={e=>update(job.id,{description:e.target.value})} placeholder="Was gehört zu diesem Job?"/></div>
+          <div>
+            <label>Aufgaben</label>
+            {(job.tasks||[]).map((task,i)=><div key={i} style={{display:'flex',alignItems:'center',gap:8,padding:'7px 0',borderBottom:'1px solid var(--border)'}}>
+              <span style={{color:'var(--accent)',fontSize:16,lineHeight:1}}>·</span>
+              <span style={{flex:1,fontSize:13}}>{task}</span>
+              <button onClick={()=>removeTask(job.id,i)} style={{background:'none',border:'none',cursor:'pointer',color:'var(--text3)',fontSize:14,padding:'2px 4px'}}>✕</button>
+            </div>)}
+            <div className="flex gap-2 mt-2">
+              <input placeholder="Aufgabe hinzufügen …" value={newTask[job.id]||''} onChange={e=>setNewTask(prev=>({...prev,[job.id]:e.target.value}))} onKeyDown={e=>e.key==='Enter'&&addTask(job.id)} style={{flex:1}}/>
+              <button className="btn btn-ghost btn-sm" onClick={()=>addTask(job.id)}>+</button>
+            </div>
+          </div>
+        </div>}
+      </div>;
+    })}
+    {showAdd&&<Modal title="💼 Neuer Job" onClose={()=>setShowAdd(false)}>
+      <div className="form-group"><label>Name</label><input autoFocus placeholder="z.B. 🍳 Küche" value={newName} onChange={e=>setNewName(e.target.value)} onKeyDown={e=>e.key==='Enter'&&add()}/></div>
+      <div className="form-group"><label>Beschreibung</label><textarea rows={2} placeholder="Was beinhaltet dieser Job?" value={newDesc} onChange={e=>setNewDesc(e.target.value)}/></div>
+      <div className="flex gap-2 mt-3">
+        <button className="btn btn-ghost flex-1" onClick={()=>setShowAdd(false)}>Abbrechen</button>
+        <button className="btn btn-primary flex-1" onClick={add}>Erstellen</button>
+      </div>
+    </Modal>}
+  </div>;
+}
+
+/* ═══ APP ROOT ═══ */
+function App() {
+  const [tab,setTab] = useState('dashboard');
+  const [members, setMembers, loadingM, syncingM] = useFirebase('members', DEFAULT_MEMBERS);
+  const [jobs,    setJobs,    loadingJ, syncingJ] = useFirebase('jobs',    DEFAULT_JOBS);
+  const [cleaningDone, setCleaningDone, loadingC] = useFirebase('cleaningDone', {});
+  const [purchases,    setPurchases,    loadingP] = useFirebase('purchases',    []);
+
+  const loading = loadingM||loadingJ||loadingC||loadingP;
+  const syncing = syncingM||syncingJ;
+
+  const tabs = [
+    {id:'dashboard',icon:'🏠',label:'Home'},
+    {id:'putzplan', icon:'🧹',label:'Putzplan'},
+    {id:'einkaufe', icon:'💸',label:'Einkäufe'},
+    {id:'bewohner', icon:'👥',label:'Bewohner'},
+    {id:'jobs',     icon:'💼',label:'Jobs'},
+  ];
+
+  const openPurchases = purchases.filter(p=>!p.done).length;
+  const todayWeekKey = getWeekKey(new Date());
+  const todayAssignments = getAssignments(jobs,members,todayWeekKey);
+  const weekDone = cleaningDone[todayWeekKey]||{};
+  const pendingJobs = todayAssignments.filter(a=>!weekDone[a.jobId]).length;
+
+  if(loading) return <div className="loading-screen">
+    <div className="loading-spinner"/>
+    <div style={{fontSize:13,color:'var(--text2)'}}>WG wird geladen …</div>
+  </div>;
+
+  const today = new Date().toLocaleDateString('de-DE',{weekday:'long',day:'2-digit',month:'short'});
+
+  return <>
+    <div style={{minHeight:'100vh',background:'linear-gradient(160deg,#0e0e0e 0%,#141210 100%)'}}>
+      <div className="app-header">
+        <div className="app-logo">🏠 WG Eifelwall</div>
+        <div className="flex items-center gap-2">
+          <div className={`sync-dot ${syncing?'syncing':''}`} title={syncing?'Speichert …':'Alles gespeichert'}/>
+          <div className="app-date">{today}</div>
+        </div>
+      </div>
+      <div className="content">
+        {tab==='dashboard'&&<Dashboard members={members} jobs={jobs} cleaningDone={cleaningDone} purchases={purchases} setActiveTab={setTab}/>}
+        {tab==='putzplan' &&<Putzplan  members={members} jobs={jobs} cleaningDone={cleaningDone} setCleaningDone={setCleaningDone}/>}
+        {tab==='einkaufe' &&<WGEinkaufe members={members} purchases={purchases} setPurchases={setPurchases}/>}
+        {tab==='bewohner' &&<Bewohner  members={members} setMembers={setMembers}/>}
+        {tab==='jobs'     &&<Jobs      jobs={jobs} setJobs={setJobs}/>}
+      </div>
+    </div>
+    <div className="bottom-nav">
+      {tabs.map(t=><button key={t.id} className={`nav-btn ${tab===t.id?'active':''}`} onClick={()=>setTab(t.id)}>
+        <div style={{position:'relative',display:'inline-flex'}}>
+          <span className="nav-icon">{t.icon}</span>
+          {t.id==='einkaufe'&&openPurchases>0&&<div style={{position:'absolute',top:-4,right:-6,background:'var(--accent)',borderRadius:'50%',width:14,height:14,fontSize:9,fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center',color:'#000'}}>{openPurchases>9?'9+':openPurchases}</div>}
+          {t.id==='putzplan'&&pendingJobs>0&&<div style={{position:'absolute',top:-4,right:-6,background:'var(--danger)',borderRadius:'50%',width:14,height:14,fontSize:9,fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center',color:'#fff'}}>{pendingJobs>9?'9+':pendingJobs}</div>}
+        </div>
+        <span className="nav-label">{t.label}</span>
+      </button>)}
+    </div>
+  </>;
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
