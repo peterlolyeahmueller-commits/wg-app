@@ -136,6 +136,16 @@
     .month-week { padding:11px 0; border-bottom:1px solid var(--border); }
     .month-week:last-child { border-bottom:none; }
     .purchase-section-label { font-size:11px; font-weight:600; color:var(--text2); text-transform:uppercase; letter-spacing:0.8px; padding:10px 16px; background:rgba(0,0,0,0.2); border-bottom:1px solid var(--border); }
+    /* Pinboard */
+    .pin-card { background:var(--bg3); border:1px solid var(--border); border-radius:12px; padding:13px; margin-bottom:8px; position:relative; transition: border-color 0.15s; }
+    .pin-card:hover { border-color:var(--border2); }
+    .pin-author { font-size:11px; font-weight:600; margin-bottom:5px; }
+    .pin-text { font-size:13px; color:var(--text); line-height:1.45; word-break:break-word; }
+    .pin-time { font-size:10px; color:var(--text3); margin-top:6px; }
+    .pin-del { position:absolute; top:10px; right:10px; background:none; border:none; cursor:pointer; color:var(--text3); font-size:14px; padding:2px 5px; border-radius:5px; transition:color 0.1s; }
+    .pin-del:hover { color:var(--danger); }
+    .pin-input-row { display:flex; gap:8px; align-items:flex-end; margin-top:10px; }
+
     /* Sync indicator */
     .sync-dot { width:7px; height:7px; border-radius:50%; background:var(--success); flex-shrink:0; }
     .sync-dot.syncing { background:var(--accent); animation:pulse 1s infinite; }
@@ -166,14 +176,28 @@
 const { useState, useEffect, useMemo, useRef } = React;
 
 /* ═══ UTILITIES ═══ */
+// Parse "YYYY-MM-DD" as LOCAL time (not UTC) to avoid timezone day-shift bugs
+function parseLocal(d) {
+  if (typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d)) {
+    const [y,m,day] = d.split('-').map(Number);
+    return new Date(y, m-1, day);
+  }
+  return new Date(d);
+}
 function getMonday(d) {
-  const date = new Date(d);
+  const date = parseLocal(d);
   const day = date.getDay();
   const diff = date.getDate() - day + (day === 0 ? -6 : 1);
   date.setDate(diff); date.setHours(0,0,0,0); return date;
 }
-function addDays(d, n) { const r = new Date(d); r.setDate(r.getDate()+n); return r; }
-function getWeekKey(d) { return getMonday(d).toISOString().split('T')[0]; }
+function addDays(d, n) { const r = parseLocal(d); r.setDate(r.getDate()+n); return r; }
+function getWeekKey(d) {
+  const m = getMonday(d);
+  const y = m.getFullYear();
+  const mo = String(m.getMonth()+1).padStart(2,'0');
+  const dy = String(m.getDate()).padStart(2,'0');
+  return `${y}-${mo}-${dy}`;
+}
 function fmtShort(d) { return new Date(d).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'}); }
 function fmtMonthYear(d) { return new Date(d).toLocaleDateString('de-DE',{month:'long',year:'numeric'}); }
 function uid() { return Date.now().toString(36)+Math.random().toString(36).slice(2); }
@@ -230,18 +254,51 @@ const DEFAULT_MEMBERS = [
   {id:'m4',name:'Mia', color:'#10b981',iban:'',absences:[]},
 ];
 const DEFAULT_JOBS = [
-  {id:'j1',name:'🍳 Küche',  tasks:['Herd abwischen','Arbeitsflächen reinigen','Spüle putzen','Boden wischen']},
-  {id:'j2',name:'🚿 Bad',    tasks:['WC reinigen','Waschbecken putzen','Dusche schrubben','Spiegel wischen']},
-  {id:'j3',name:'🚪 Flur',   tasks:['Saugen','Wischen','Eingang sauber halten']},
-  {id:'j4',name:'🗑️ Müll',   tasks:['Restmüll','Biomüll','Papiermüll','Gelber Sack']},
+  {id:'j1',name:'🍳 Küche',  frequency:'weekly',  tasks:['Herd abwischen','Arbeitsflächen reinigen','Spüle putzen','Boden wischen']},
+  {id:'j2',name:'🚿 Bad',    frequency:'weekly',  tasks:['WC reinigen','Waschbecken putzen','Dusche schrubben','Spiegel wischen']},
+  {id:'j3',name:'🚪 Flur',   frequency:'weekly',  tasks:['Saugen','Wischen','Eingang sauber halten']},
+  {id:'j4',name:'🗑️ Müll',   frequency:'weekly',  tasks:['Restmüll','Biomüll','Papiermüll','Gelber Sack']},
 ];
 
 /* ═══ ROTATION ═══ */
+function isFirstWeekOfMonth(weekKey) {
+  const mon = new Date(weekKey);
+  // The week is "first week of month" if Monday is in days 1-7 of the month
+  return mon.getDate() <= 7;
+}
+
+function getMonthlyWeekSlot(weekKey) {
+  // Returns which "slot" (0,1,2,...) this week is within the month (0 = first week)
+  const mon = new Date(weekKey);
+  return Math.floor((mon.getDate() - 1) / 7);
+}
+
+function getJobsForWeek(jobs, members, weekKey) {
+  if (!jobs.length || !members.length) return [];
+  const memberCount = members.length;
+  const weekSlot = getMonthlyWeekSlot(weekKey);
+
+  // Weekly jobs: always included
+  const weeklyJobs = jobs.filter(j => (j.frequency || 'weekly') === 'weekly');
+
+  // Monthly jobs: distribute across weeks, max memberCount per week
+  const monthlyJobs = jobs.filter(j => j.frequency === 'monthly');
+  const monthlyForThisWeek = monthlyJobs.filter((_, i) => Math.floor(i / memberCount) === weekSlot);
+
+  return [...weeklyJobs, ...monthlyForThisWeek];
+}
+
 function getAssignments(jobs, members, weekKey) {
-  const avail = members.filter(m => !isMemberAway(m, weekKey));
-  if (!avail.length || !jobs.length) return [];
+  if (!members.length || !jobs.length) return [];
   const wn = weekNumber(weekKey);
-  return jobs.map((job,i) => ({jobId:job.id, memberId:avail[(wn+i)%avail.length].id}));
+  const activeJobs = getJobsForWeek(jobs, members, weekKey);
+  if (!activeJobs.length) return [];
+
+  return activeJobs.map((job, i) => {
+    const memberId = members[(wn + i) % members.length].id;
+    const absent = isMemberAway(members.find(m => m.id === memberId), weekKey);
+    return { jobId: job.id, memberId, absent };
+  });
 }
 
 /* ═══ SHARED COMPONENTS ═══ */
@@ -274,8 +331,90 @@ function Modal({title, onClose, children}) {
   </div>;
 }
 
+/* ═══ PINNWAND ═══ */
+function Pinnwand({members, pins, setPins}) {
+  const [text, setText] = React.useState('');
+  const [author, setAuthor] = React.useState('');
+  const [open, setOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    if (members.length > 0 && !author) setAuthor(members[0].id);
+  }, [members]);
+
+  function addPin() {
+    if (!text.trim() || !author) return;
+    setPins(prev => [{
+      id: uid(),
+      text: text.trim(),
+      authorId: author,
+      createdAt: new Date().toISOString()
+    }, ...(prev||[])]);
+    setText('');
+  }
+
+  function delPin(id) {
+    setPins(prev => prev.filter(p => p.id !== id));
+  }
+
+  function fmtTime(iso) {
+    const d = new Date(iso);
+    const now = new Date();
+    const diff = Math.floor((now - d) / 60000);
+    if (diff < 1) return 'gerade eben';
+    if (diff < 60) return `vor ${diff} Min`;
+    if (diff < 1440) return `vor ${Math.floor(diff/60)} Std`;
+    return d.toLocaleDateString('de-DE', {day:'2-digit', month:'2-digit'});
+  }
+
+  const sortedPins = [...(pins||[])].sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+  return <div style={{marginTop:4}}>
+    <div className="flex items-center justify-between" style={{marginBottom:10}}>
+      <div style={{fontFamily:'Syne', fontWeight:700, fontSize:16, letterSpacing:'-0.3px'}}>📌 Pinnwand</div>
+      <button className="btn btn-ghost btn-xs" onClick={()=>setOpen(o=>!o)}>
+        {open ? 'Abbrechen' : '+ Notiz'}
+      </button>
+    </div>
+
+    {open && <div className="card" style={{marginBottom:10}}>
+      <div className="form-group" style={{marginBottom:10}}>
+        <label>Von wem?</label>
+        <select value={author} onChange={e=>setAuthor(e.target.value)}>
+          {members.map(m=><option key={m.id} value={m.id}>{m.name}</option>)}
+        </select>
+      </div>
+      <div className="pin-input-row">
+        <textarea
+          rows={2}
+          placeholder="Frage, Vorschlag, Idee …"
+          value={text}
+          onChange={e=>setText(e.target.value)}
+          onKeyDown={e=>{ if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();addPin();} }}
+          style={{flex:1}}
+        />
+        <button className="btn btn-primary btn-sm" onClick={addPin} style={{flexShrink:0}}>📌</button>
+      </div>
+    </div>}
+
+    {sortedPins.length === 0
+      ? <div style={{textAlign:'center',padding:'24px 0',color:'var(--text3)',fontSize:13}}>Noch keine Notizen</div>
+      : sortedPins.map(pin => {
+          const member = members.find(m=>m.id===pin.authorId);
+          return <div key={pin.id} className="pin-card">
+            {member && <div className="pin-author" style={{color:member.color}}>
+              {member.name}
+            </div>}
+            <div className="pin-text">{pin.text}</div>
+            <div className="pin-time">{fmtTime(pin.createdAt)}</div>
+            <button className="pin-del" onClick={()=>delPin(pin.id)}>✕</button>
+          </div>;
+        })
+    }
+  </div>;
+}
+
 /* ═══ DASHBOARD ═══ */
-function Dashboard({members,jobs,cleaningDone,purchases,setActiveTab}) {
+function Dashboard({members,jobs,cleaningDone,purchases,pins,setPins,setActiveTab}) {
   const today = new Date();
   const weekKey = getWeekKey(today);
   const monday = new Date(weekKey), sunday = addDays(monday,6);
@@ -311,12 +450,13 @@ function Dashboard({members,jobs,cleaningDone,purchases,setActiveTab}) {
         const done=weekDone[a.jobId];
         if(!job||!member) return null;
         return <div key={a.jobId} className="row-item">
-          <div style={{width:4,height:36,borderRadius:4,background:done?'var(--success)':member.color,flexShrink:0}}/>
+          <div style={{width:4,height:36,borderRadius:4,background:done?'var(--success)':a.absent?'var(--accent)':member.color,flexShrink:0}}/>
           <div style={{flex:1}}>
             <div style={{fontSize:14,fontWeight:500,textDecoration:done?'line-through':'none',color:done?'var(--text2)':'var(--text)'}}>{job.name}</div>
           </div>
           <div className="flex items-center gap-2">
             {done&&<span style={{color:'var(--success)',fontSize:13}}>erledigt</span>}
+            {a.absent&&!done&&<span style={{fontSize:11,color:'var(--accent)',fontWeight:500}}>abwesend</span>}
             <Avatar member={member} size={26}/>
           </div>
         </div>;
@@ -352,6 +492,8 @@ function Dashboard({members,jobs,cleaningDone,purchases,setActiveTab}) {
       <div style={{fontFamily:'Syne',fontWeight:700,fontSize:18,marginTop:10}}>Alles erledigt!</div>
       <div style={{color:'var(--text2)',fontSize:13,marginTop:4}}>Die WG ist tip-top diese Woche.</div>
     </div>}
+
+    <Pinnwand members={members} pins={pins} setPins={setPins} />
   </div>;
 }
 
@@ -403,12 +545,16 @@ function Putzplan({members,jobs,cleaningDone,setCleaningDone}) {
           const job=jobs.find(j=>j.id===a.jobId), member=members.find(m=>m.id===a.memberId);
           const done=weekDone[a.jobId]||false;
           if(!job||!member) return null;
-          return <div key={a.jobId} style={{display:'flex',alignItems:'center',gap:14,padding:'15px 16px',borderBottom:i<assignments.length-1?'1px solid var(--border)':'none',background:done?'rgba(34,197,94,0.05)':'transparent',transition:'background 0.2s'}}>
-            <CheckBox checked={done} onChange={()=>toggle(a.jobId)} color={member.color}/>
+          return <div key={a.jobId} style={{display:'flex',alignItems:'center',gap:14,padding:'15px 16px',borderBottom:i<assignments.length-1?'1px solid var(--border)':'none',background:done?'rgba(34,197,94,0.05)':a.absent?'rgba(245,158,11,0.03)':'transparent',transition:'background 0.2s'}}>
+            <CheckBox checked={done} onChange={()=>toggle(a.jobId)} color={a.absent?'var(--accent)':member.color}/>
             <div style={{flex:1}}>
               <div style={{fontSize:15,fontWeight:500,textDecoration:done?'line-through':'none',color:done?'var(--text2)':'var(--text)'}}>{job.name}</div>
+              {(job.frequency==='monthly') && <div style={{fontSize:11,color:'var(--accent)',marginTop:1,fontWeight:500}}>monatlich</div>}
             </div>
-            <Avatar member={member} size={30}/>
+            <div style={{display:'flex',alignItems:'center',gap:6}}>
+              {a.absent && <span style={{fontSize:11,color:'var(--accent)',fontWeight:500,background:'rgba(245,158,11,0.1)',padding:'2px 7px',borderRadius:6}}>abwesend</span>}
+              <Avatar member={member} size={30}/>
+            </div>
           </div>;
         })}
       </div>}
@@ -675,14 +821,14 @@ function Jobs({jobs,setJobs}) {
   const [expanded,setExpanded] = useState(null);
   const [showAdd,setShowAdd] = useState(false);
   const [newName,setNewName] = useState('');
-  const [newDesc,setNewDesc] = useState('');
+  const [newFreq,setNewFreq] = useState('weekly');
   const [newTask,setNewTask] = useState({});
 
   function add() {
     if(!newName.trim()) return;
     const id=uid();
-    setJobs(prev=>[...prev,{id,name:newName.trim(),tasks:[]}]);
-    setExpanded(id); setNewName(''); setShowAdd(false);
+    setJobs(prev=>[...prev,{id,name:newName.trim(),frequency:newFreq,tasks:[]}]);
+    setExpanded(id); setNewName(''); setNewFreq('weekly'); setShowAdd(false);
   }
   function del(id) { if(confirm('Job wirklich löschen?')){setJobs(prev=>prev.filter(j=>j.id!==id));if(expanded===id)setExpanded(null);} }
   function update(id,changes) { setJobs(prev=>prev.map(j=>j.id===id?{...j,...changes}:j)); }
@@ -709,13 +855,22 @@ function Jobs({jobs,setJobs}) {
         <div className="job-card-header" onClick={()=>setExpanded(isOpen?null:job.id)}>
           <div style={{flex:1,minWidth:0}}>
             <div style={{fontSize:15,fontWeight:600}} className="truncate">{job.name}</div>
-            <div style={{fontSize:12,color:'var(--text2)',marginTop:2}}>{(job.tasks||[]).length} Aufgabe{(job.tasks||[]).length!==1?'n':''}</div>
+            <div style={{fontSize:12,color:'var(--text2)',marginTop:2}}>
+              {(job.tasks||[]).length} Aufgabe{(job.tasks||[]).length!==1?'n':''} · {job.frequency==='monthly'?'🗓️ monatlich':'📅 wöchentlich'}
+            </div>
           </div>
           <button onClick={e=>{e.stopPropagation();del(job.id);}} style={{background:'none',border:'none',cursor:'pointer',color:'var(--text3)',fontSize:16,padding:'4px',marginRight:4}}>🗑️</button>
           <span style={{color:'var(--text2)',fontSize:12}}>{isOpen?'▲':'▼'}</span>
         </div>
         {isOpen&&<div className="job-card-body">
           <div className="form-group"><label>Name</label><input value={job.name} onChange={e=>update(job.id,{name:e.target.value})} placeholder="z.B. 🍳 Küche"/></div>
+          <div className="form-group">
+            <label>Häufigkeit</label>
+            <div className="tab-switch" style={{marginBottom:0}}>
+              <button className={`tab-switch-btn ${(job.frequency||'weekly')==='weekly'?'active':''}`} onClick={()=>update(job.id,{frequency:'weekly'})}>📅 Wöchentlich</button>
+              <button className={`tab-switch-btn ${job.frequency==='monthly'?'active':''}`} onClick={()=>update(job.id,{frequency:'monthly'})}>🗓️ Monatlich</button>
+            </div>
+          </div>
           <div>
             <label>Aufgaben</label>
             {(job.tasks||[]).map((task,i)=><div key={i} style={{display:'flex',alignItems:'center',gap:8,padding:'7px 0',borderBottom:'1px solid var(--border)'}}>
@@ -733,6 +888,13 @@ function Jobs({jobs,setJobs}) {
     })}
     {showAdd&&<Modal title="💼 Neuer Job" onClose={()=>setShowAdd(false)}>
       <div className="form-group"><label>Name</label><input autoFocus placeholder="z.B. 🍳 Küche" value={newName} onChange={e=>setNewName(e.target.value)} onKeyDown={e=>e.key==='Enter'&&add()}/></div>
+      <div className="form-group">
+        <label>Häufigkeit</label>
+        <div className="tab-switch" style={{marginBottom:0}}>
+          <button className={`tab-switch-btn ${newFreq==='weekly'?'active':''}`} onClick={()=>setNewFreq('weekly')}>📅 Wöchentlich</button>
+          <button className={`tab-switch-btn ${newFreq==='monthly'?'active':''}`} onClick={()=>setNewFreq('monthly')}>🗓️ Monatlich</button>
+        </div>
+      </div>
       <div className="flex gap-2 mt-3">
         <button className="btn btn-ghost flex-1" onClick={()=>setShowAdd(false)}>Abbrechen</button>
         <button className="btn btn-primary flex-1" onClick={add}>Erstellen</button>
@@ -748,8 +910,9 @@ function App() {
   const [jobs,    setJobs,    loadingJ, syncingJ] = useFirebase('jobs',    DEFAULT_JOBS);
   const [cleaningDone, setCleaningDone, loadingC] = useFirebase('cleaningDone', {});
   const [purchases,    setPurchases,    loadingP] = useFirebase('purchases',    []);
+  const [pins,         setPins,         loadingPi] = useFirebase('pins',         []);
 
-  const loading = loadingM||loadingJ||loadingC||loadingP;
+  const loading = loadingM||loadingJ||loadingC||loadingP||loadingPi;
   const syncing = syncingM||syncingJ;
 
   const tabs = [
@@ -783,7 +946,7 @@ function App() {
         </div>
       </div>
       <div className="content">
-        {tab==='dashboard'&&<Dashboard members={members} jobs={jobs} cleaningDone={cleaningDone} purchases={purchases} setActiveTab={setTab}/>}
+        {tab==='dashboard'&&<Dashboard members={members} jobs={jobs} cleaningDone={cleaningDone} purchases={purchases} pins={pins} setPins={setPins} setActiveTab={setTab}/>}
         {tab==='putzplan' &&<Putzplan  members={members} jobs={jobs} cleaningDone={cleaningDone} setCleaningDone={setCleaningDone}/>}
         {tab==='einkaufe' &&<WGEinkaufe members={members} purchases={purchases} setPurchases={setPurchases}/>}
         {tab==='bewohner' &&<Bewohner  members={members} setMembers={setMembers}/>}
