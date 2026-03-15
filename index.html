@@ -1028,7 +1028,7 @@ function App() {
   const [cleaningDone, setCleaningDone, loadingC] = useFirebase('cleaningDone', {});
   const [purchases,    setPurchases,    loadingP] = useFirebase('purchases',    []);
   const [pins,         setPins,         loadingPi] = useFirebase('pins',         []);
-  const [appPin,       setAppPin,       loadingPin] = useFirebase('appPin',       null);
+  const [appPin,       setAppPin,       loadingPin] = useFirebase('appPin',       'unset');
 
   const loading = loadingM||loadingJ||loadingC||loadingP||loadingPi||loadingPin;
   const syncing = syncingM||syncingJ;
@@ -1054,7 +1054,7 @@ function App() {
 
   // PIN gate
   if (!unlocked) {
-    if (appPin === null) {
+    if (appPin === 'unset') {
       // First time: setup PIN
       return <PinScreen isSetup={true} onUnlock={pin => { setAppPin(pin); setUnlocked(true); }} />;
     }
