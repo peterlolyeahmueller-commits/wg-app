@@ -136,6 +136,23 @@
     .month-week { padding:11px 0; border-bottom:1px solid var(--border); }
     .month-week:last-child { border-bottom:none; }
     .purchase-section-label { font-size:11px; font-weight:600; color:var(--text2); text-transform:uppercase; letter-spacing:0.8px; padding:10px 16px; background:rgba(0,0,0,0.2); border-bottom:1px solid var(--border); }
+    /* PIN Screen */
+    .pin-screen { position:fixed; inset:0; background:var(--bg); z-index:1000; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px 32px; }
+    .pin-logo { font-family:'Syne',sans-serif; font-weight:800; font-size:28px; color:var(--accent); margin-bottom:8px; }
+    .pin-subtitle { font-size:13px; color:var(--text2); margin-bottom:48px; }
+    .pin-dots { display:flex; gap:14px; margin-bottom:40px; }
+    .pin-dot { width:14px; height:14px; border-radius:50%; border:2px solid var(--border2); transition:all 0.15s; }
+    .pin-dot.filled { background:var(--accent); border-color:var(--accent); }
+    .pin-dot.error { background:var(--danger); border-color:var(--danger); animation:shake 0.3s; }
+    @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)} }
+    .pin-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; width:100%; max-width:280px; }
+    .pin-key { background:var(--bg2); border:1px solid var(--border); border-radius:16px; height:68px; display:flex; align-items:center; justify-content:center; font-family:'Syne',sans-serif; font-size:22px; font-weight:700; cursor:pointer; transition:all 0.1s; user-select:none; -webkit-tap-highlight-color:transparent; }
+    .pin-key:active { background:var(--bg3); transform:scale(0.94); border-color:var(--accent); }
+    .pin-key.del { font-size:18px; color:var(--text2); }
+    .pin-key.empty { background:transparent; border-color:transparent; cursor:default; }
+    .pin-error-msg { font-size:13px; color:var(--danger); margin-bottom:16px; height:18px; }
+    .pin-setup-label { font-size:14px; color:var(--text2); margin-bottom:32px; text-align:center; line-height:1.5; }
+
     /* Pinboard */
     .pin-card { background:var(--bg3); border:1px solid var(--border); border-radius:12px; padding:13px; margin-bottom:8px; position:relative; transition: border-color 0.15s; }
     .pin-card:hover { border-color:var(--border2); }
@@ -911,16 +928,109 @@ function Jobs({jobs,setJobs}) {
   </div>;
 }
 
+/* ═══ PIN SCREEN ═══ */
+function PinScreen({onUnlock, isSetup, existingPin}) {
+  const [input, setInput] = React.useState('');
+  const [confirm, setConfirm] = React.useState('');
+  const [step, setStep] = React.useState('enter'); // 'enter' | 'confirm'
+  const [error, setError] = React.useState('');
+  const [shake, setShake] = React.useState(false);
+
+  const PIN_LENGTH = 4;
+
+  function triggerError(msg) {
+    setError(msg);
+    setShake(true);
+    setTimeout(() => { setShake(false); setInput(''); }, 600);
+  }
+
+  function handleKey(k) {
+    if (k === 'del') {
+      setInput(p => p.slice(0,-1));
+      setError('');
+      return;
+    }
+    const next = input + k;
+    if (next.length > PIN_LENGTH) return;
+    setInput(next);
+
+    if (next.length === PIN_LENGTH) {
+      setTimeout(() => {
+        if (isSetup) {
+          if (step === 'enter') {
+            setConfirm(next);
+            setInput('');
+            setStep('confirm');
+          } else {
+            if (next === confirm) {
+              onUnlock(next);
+            } else {
+              triggerError('PINs stimmen nicht überein');
+              setStep('enter');
+              setConfirm('');
+            }
+          }
+        } else {
+          if (next === existingPin) {
+            onUnlock(next);
+          } else {
+            triggerError('Falscher PIN');
+          }
+        }
+      }, 100);
+    }
+  }
+
+  const keys = ['1','2','3','4','5','6','7','8','9','empty','0','del'];
+  const displayInput = isSetup && step === 'confirm' ? input : input;
+
+  return <div className="pin-screen">
+    <div className="pin-logo">🏠 WG Eifelwall</div>
+    <div className="pin-subtitle">
+      {isSetup ? 'PIN einrichten' : 'PIN eingeben'}
+    </div>
+
+    {isSetup && <div className="pin-setup-label">
+      {step === 'enter'
+        ? 'Lege einen 4-stelligen PIN fest
+für die ganze WG.'
+        : 'PIN zur Bestätigung
+nochmal eingeben.'}
+    </div>}
+
+    <div className="pin-dots">
+      {Array.from({length: PIN_LENGTH}).map((_,i) => (
+        <div key={i} className={`pin-dot ${i < displayInput.length ? (shake ? 'error' : 'filled') : ''}`} />
+      ))}
+    </div>
+
+    <div className="pin-error-msg">{error}</div>
+
+    <div className="pin-grid">
+      {keys.map((k,i) => (
+        <div key={i}
+          className={`pin-key ${k==='del'?'del':''} ${k==='empty'?'empty':''}`}
+          onClick={() => k !== 'empty' && handleKey(k)}
+        >
+          {k === 'del' ? '⌫' : k === 'empty' ? '' : k}
+        </div>
+      ))}
+    </div>
+  </div>;
+}
+
 /* ═══ APP ROOT ═══ */
 function App() {
   const [tab,setTab] = useState('dashboard');
+  const [unlocked, setUnlocked] = useState(false);
   const [members, setMembers, loadingM, syncingM] = useFirebase('members', DEFAULT_MEMBERS);
   const [jobs,    setJobs,    loadingJ, syncingJ] = useFirebase('jobs',    DEFAULT_JOBS);
   const [cleaningDone, setCleaningDone, loadingC] = useFirebase('cleaningDone', {});
   const [purchases,    setPurchases,    loadingP] = useFirebase('purchases',    []);
   const [pins,         setPins,         loadingPi] = useFirebase('pins',         []);
+  const [appPin,       setAppPin,       loadingPin] = useFirebase('appPin',       null);
 
-  const loading = loadingM||loadingJ||loadingC||loadingP||loadingPi;
+  const loading = loadingM||loadingJ||loadingC||loadingP||loadingPi||loadingPin;
   const syncing = syncingM||syncingJ;
 
   const tabs = [
@@ -941,6 +1051,15 @@ function App() {
     <div className="loading-spinner"/>
     <div style={{fontSize:13,color:'var(--text2)'}}>WG wird geladen …</div>
   </div>;
+
+  // PIN gate
+  if (!unlocked) {
+    if (appPin === null) {
+      // First time: setup PIN
+      return <PinScreen isSetup={true} onUnlock={pin => { setAppPin(pin); setUnlocked(true); }} />;
+    }
+    return <PinScreen isSetup={false} existingPin={appPin} onUnlock={() => setUnlocked(true)} />;
+  }
 
   const today = new Date().toLocaleDateString('de-DE',{weekday:'long',day:'2-digit',month:'short'});
 
