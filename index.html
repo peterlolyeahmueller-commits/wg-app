@@ -305,16 +305,27 @@ function getJobsForWeek(jobs, members, weekKey) {
   return [...weeklyJobs, ...monthlyForThisWeek];
 }
 
-function getAssignments(jobs, members, weekKey) {
+function getAssignments(jobs, members, weekKey, ausgleich) {
   if (!members.length || !jobs.length) return [];
   const wn = weekNumber(weekKey);
   const activeJobs = getJobsForWeek(jobs, members, weekKey);
   if (!activeJobs.length) return [];
 
+  // Sort members by ausgleich descending so people with more owed jobs get assigned first
+  const aus = ausgleich || {};
+  const sorted = [...members].sort((a, b) => (aus[b.id] || 0) - (aus[a.id] || 0));
+
   return activeJobs.map((job, i) => {
-    const memberId = members[(wn + i) % members.length].id;
-    const absent = isMemberAway(members.find(m => m.id === memberId), weekKey);
-    return { jobId: job.id, memberId, absent };
+    // Use sorted order for ausgleich priority, fall back to normal rotation
+    const topAus = sorted.filter(m => (aus[m.id] || 0) > 0);
+    let member;
+    if (topAus.length > 0 && i < topAus.length) {
+      member = topAus[i % topAus.length];
+    } else {
+      member = members[(wn + i) % members.length];
+    }
+    const absent = isMemberAway(member, weekKey);
+    return { jobId: job.id, memberId: member.id, absent };
   });
 }
 
@@ -431,11 +442,11 @@ function Pinnwand({members, pins, setPins}) {
 }
 
 /* ═══ DASHBOARD ═══ */
-function Dashboard({members,jobs,cleaningDone,purchases,pins,setPins,setActiveTab}) {
+function Dashboard({members,jobs,cleaningDone,purchases,pins,setPins,ausgleich,setActiveTab}) {
   const today = new Date();
   const weekKey = getWeekKey(today);
   const monday = new Date(weekKey), sunday = addDays(monday,6);
-  const assignments = useMemo(()=>getAssignments(jobs,members,weekKey),[jobs,members,weekKey]);
+  const assignments = useMemo(()=>getAssignments(jobs,members,weekKey,ausgleich),[jobs,members,weekKey,ausgleich]);
   const awayNow = members.filter(m=>isMemberAway(m,weekKey));
   const openP = purchases.filter(p=>!p.done);
   const weekDone = cleaningDone[weekKey]||{};
@@ -523,17 +534,48 @@ function Dashboard({members,jobs,cleaningDone,purchases,pins,setPins,setActiveTa
 }
 
 /* ═══ PUTZPLAN ═══ */
-function Putzplan({members,jobs,cleaningDone,setCleaningDone}) {
+function Putzplan({members,jobs,cleaningDone,setCleaningDone,ausgleich,setAusgleich,processedWks,setProcessedWks}) {
   const [view,setView] = useState('woche');
   const [weekKey,setWeekKey] = useState(getWeekKey(new Date()));
   const monday = new Date(weekKey), sunday = addDays(monday,6);
   const currentWeekKey = getWeekKey(new Date());
   const isCurrentWeek = weekKey===currentWeekKey;
-  const assignments = useMemo(()=>getAssignments(jobs,members,weekKey),[jobs,members,weekKey]);
+  const assignments = useMemo(()=>getAssignments(jobs,members,weekKey,ausgleich),[jobs,members,weekKey,ausgleich]);
   const weekDone = cleaningDone[weekKey]||{};
   const awayThisWeek = members.filter(m=>isMemberAway(m,weekKey));
 
+  // Process past week: if someone was absent and job not done → +1 ausgleich
+  useEffect(() => {
+    const pastKey = getWeekKey(addDays(new Date(), -7));
+    if (processedWks[pastKey]) return;
+    const pastAssign = getAssignments(jobs, members, pastKey, ausgleich);
+    const pastDone = cleaningDone[pastKey] || {};
+    let changed = false;
+    const newAus = {...(ausgleich||{})};
+    pastAssign.forEach(a => {
+      if (a.absent && !pastDone[a.jobId]) {
+        newAus[a.memberId] = (newAus[a.memberId] || 0) + 1;
+        changed = true;
+      }
+    });
+    if (changed) {
+      setAusgleich(newAus);
+      setProcessedWks(prev => ({...prev, [pastKey]: true}));
+    } else if (pastAssign.length > 0) {
+      setProcessedWks(prev => ({...prev, [pastKey]: true}));
+    }
+  }, [weekKey]);
+
   function toggle(jobId) {
+    const wasDone = (cleaningDone[weekKey]||{})[jobId];
+    const assignment = assignments.find(a => a.jobId === jobId);
+    // Decrement ausgleich when completing a job (if member had ausgleich)
+    if (!wasDone && assignment) {
+      const memberAus = (ausgleich||{})[assignment.memberId] || 0;
+      if (memberAus > 0) {
+        setAusgleich(prev => ({...prev, [assignment.memberId]: Math.max(0, (prev[assignment.memberId]||0) - 1)}));
+      }
+    }
     setCleaningDone(prev=>({...prev,[weekKey]:{...(prev[weekKey]||{}),[jobId]:!(prev[weekKey]||{})[jobId]}}));
   }
 
@@ -596,7 +638,7 @@ function Putzplan({members,jobs,cleaningDone,setCleaningDone}) {
       <div className="card" style={{padding:'4px 16px'}}>
         {monthWeeks.map(wk=>{
           const wkMon=new Date(wk), wkSun=addDays(wkMon,6);
-          const wkAssign=getAssignments(jobs,members,wk);
+          const wkAssign=getAssignments(jobs,members,wk,ausgleich);
           const wkDone=cleaningDone[wk]||{};
           const dc=Object.values(wkDone).filter(Boolean).length;
           const isCur=wk===currentWeekKey;
@@ -743,7 +785,7 @@ function ColorDropdown({value, takenColors, onChange}) {
 }
 
 /* ═══ BEWOHNER ═══ */
-function Bewohner({members,setMembers}) {
+function Bewohner({members,setMembers,ausgleich,setAusgleich}) {
   const [showAdd,setShowAdd] = useState(false);
   const [newName,setNewName] = useState('');
   const [newColor,setNewColor] = useState(COLORS[0]);
@@ -781,7 +823,16 @@ function Bewohner({members,setMembers}) {
             style={{background:'transparent',border:'none',padding:0,fontSize:17,fontWeight:600,fontFamily:'Syne',color:'var(--text)',borderBottom:'1px solid transparent',borderRadius:0,width:'100%'}}
             onFocus={e=>e.target.style.borderBottomColor='var(--accent)'}
             onBlur={e=>e.target.style.borderBottomColor='transparent'}/>
-          <div style={{fontSize:12,color:'var(--text2)',marginTop:2}}>Bewohner</div>
+          <div style={{fontSize:12,color:'var(--text2)',marginTop:2,display:'flex',alignItems:'center',gap:6}}>
+            Bewohner
+            {(ausgleich||{})[member.id] > 0 && (
+              <span style={{background:'rgba(245,158,11,0.15)',color:'var(--accent)',fontSize:11,fontWeight:600,padding:'1px 7px',borderRadius:6,cursor:'pointer'}}
+                onClick={()=>setAusgleich(prev=>({...prev,[member.id]:Math.max(0,(prev[member.id]||1)-1)}))}
+                title="Klicken um Ausgleich zu reduzieren">
+                ↩️ {(ausgleich||{})[member.id]} Ausgleich
+              </span>
+            )}
+          </div>
         </div>
         <button onClick={()=>remove(member.id)} style={{background:'none',border:'1px solid var(--danger)',borderRadius:7,cursor:'pointer',color:'var(--danger)',fontSize:12,padding:'5px 10px',fontFamily:'DM Sans'}}>Ausziehen</button>
       </div>
@@ -1025,10 +1076,12 @@ function App() {
   const [jobs,    setJobs,    loadingJ, syncingJ] = useFirebase('jobs',    DEFAULT_JOBS);
   const [cleaningDone, setCleaningDone, loadingC] = useFirebase('cleaningDone', {});
   const [purchases,    setPurchases,    loadingP] = useFirebase('purchases',    []);
-  const [pins,         setPins,         loadingPi] = useFirebase('pins',         []);
+  const [pins,         setPins,         loadingPi]  = useFirebase('pins',         []);
   const [appPin,       setAppPin,       loadingPin] = useFirebase('appPin',       'unset');
+  const [ausgleich,    setAusgleich,    loadingA]   = useFirebase('ausgleich',    {});
+  const [processedWks, setProcessedWks, loadingPW]  = useFirebase('processedWeeks', {});
 
-  const loading = loadingM||loadingJ||loadingC||loadingP||loadingPi||loadingPin;
+  const loading = loadingM||loadingJ||loadingC||loadingP||loadingPi||loadingPin||loadingA||loadingPW;
   const syncing = syncingM||syncingJ;
 
   const tabs = [
@@ -1041,7 +1094,7 @@ function App() {
 
   const openPurchases = purchases.filter(p=>!p.done).length;
   const todayWeekKey = getWeekKey(new Date());
-  const todayAssignments = getAssignments(jobs,members,todayWeekKey);
+  const todayAssignments = getAssignments(jobs,members,todayWeekKey,ausgleich);
   const weekDone = cleaningDone[todayWeekKey]||{};
   const pendingJobs = todayAssignments.filter(a=>!weekDone[a.jobId]).length;
 
@@ -1071,10 +1124,10 @@ function App() {
         </div>
       </div>
       <div className="content">
-        {tab==='dashboard'&&<Dashboard members={members} jobs={jobs} cleaningDone={cleaningDone} purchases={purchases} pins={pins} setPins={setPins} setActiveTab={setTab}/>}
-        {tab==='putzplan' &&<Putzplan  members={members} jobs={jobs} cleaningDone={cleaningDone} setCleaningDone={setCleaningDone}/>}
+        {tab==='dashboard'&&<Dashboard members={members} jobs={jobs} cleaningDone={cleaningDone} purchases={purchases} pins={pins} setPins={setPins} ausgleich={ausgleich} setActiveTab={setTab}/>}
+        {tab==='putzplan' &&<Putzplan  members={members} jobs={jobs} cleaningDone={cleaningDone} setCleaningDone={setCleaningDone} ausgleich={ausgleich} setAusgleich={setAusgleich} processedWks={processedWks} setProcessedWks={setProcessedWks}/>}
         {tab==='einkaufe' &&<WGEinkaufe members={members} purchases={purchases} setPurchases={setPurchases}/>}
-        {tab==='bewohner' &&<Bewohner  members={members} setMembers={setMembers}/>}
+        {tab==='bewohner' &&<Bewohner  members={members} setMembers={setMembers} ausgleich={ausgleich} setAusgleich={setAusgleich}/>}
         {tab==='jobs'     &&<Jobs      jobs={jobs} setJobs={setJobs}/>}
       </div>
     </div>
