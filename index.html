@@ -307,31 +307,33 @@ function getJobsForWeek(jobs, members, weekKey) {
 
 function getAssignments(jobs, members, weekKey, ausgleich) {
   if (!members.length || !jobs.length) return [];
-  const wn = weekNumber(weekKey);
   const activeJobs = getJobsForWeek(jobs, members, weekKey);
   if (!activeJobs.length) return [];
 
   const aus = ausgleich || {};
+  const wn = weekNumber(weekKey);
+  const n = members.length;
 
-  // Only anwesende members get jobs assigned
-  const anwesend = members.filter(m => !isMemberAway(m, weekKey));
-  if (!anwesend.length) return activeJobs.map(job => ({ jobId: job.id, memberId: null, absent: true }));
+  // Only present members get assigned jobs
+  const present = members.filter(m => !isMemberAway(m, weekKey));
+  if (!present.length) return activeJobs.map(job => ({ jobId: job.id, memberId: null }));
 
-  // Sort anwesende: most ausgleich first, then normal rotation order
-  const rotationOrder = [...anwesend].sort((a, b) => {
-    const ausgleichDiff = (aus[b.id] || 0) - (aus[a.id] || 0);
-    if (ausgleichDiff !== 0) return ausgleichDiff;
-    // fallback: keep original rotation order
-    const ai = members.indexOf(members.find(m => m.id === a.id));
-    const bi = members.indexOf(members.find(m => m.id === b.id));
-    return ((ai - wn) % members.length + members.length) % members.length -
-           ((bi - wn) % members.length + members.length) % members.length;
+  // Sort present members:
+  // 1. Most positive ausgleich (debt) first — they need to catch up
+  // 2. Most negative ausgleich (credit) last — they earned a break
+  // 3. Tie-break: rotation order based on week number
+  const sorted = [...present].sort((a, b) => {
+    const diff = (aus[b.id] || 0) - (aus[a.id] || 0);
+    if (diff !== 0) return diff;
+    const idxA = members.findIndex(m => m.id === a.id);
+    const idxB = members.findIndex(m => m.id === b.id);
+    return ((idxA - wn) % n + n) % n - ((idxB - wn) % n + n) % n;
   });
 
-  return activeJobs.map((job, i) => {
-    const member = rotationOrder[i % rotationOrder.length];
-    return { jobId: job.id, memberId: member.id, absent: false };
-  });
+  return activeJobs.map((job, i) => ({
+    jobId: job.id,
+    memberId: sorted[i % sorted.length].id
+  }));
 }
 
 /* ═══ SHARED COMPONENTS ═══ */
@@ -549,38 +551,46 @@ function Putzplan({members,jobs,cleaningDone,setCleaningDone,ausgleich,setAusgle
   const weekDone = cleaningDone[weekKey]||{};
   const awayThisWeek = members.filter(m=>isMemberAway(m,weekKey));
 
-  // Process past week: if someone was absent and job not done → +1 ausgleich
+  // Week-end processing: calculate ausgleich for previous week
   useEffect(() => {
+    if (!members.length || !jobs.length) return;
     const pastKey = getWeekKey(addDays(new Date(), -7));
-    if (processedWks[pastKey]) return;
-    const pastAssign = getAssignments(jobs, members, pastKey, ausgleich);
-    const pastDone = cleaningDone[pastKey] || {};
-    let changed = false;
+    if ((processedWks||{})[pastKey]) return;
+
+    const pastPresent = members.filter(m => !isMemberAway(m, pastKey));
+    const pastAbsent  = members.filter(m =>  isMemberAway(m, pastKey));
+    const pastAssign  = getAssignments(jobs, members, pastKey, ausgleich);
+    const pastDone    = cleaningDone[pastKey] || {};
+    if (!pastAssign.length) { setProcessedWks(prev=>({...(prev||{}),[pastKey]:true})); return; }
+
     const newAus = {...(ausgleich||{})};
-    pastAssign.forEach(a => {
-      if (a.absent && !pastDone[a.jobId]) {
-        newAus[a.memberId] = (newAus[a.memberId] || 0) + 1;
-        changed = true;
+
+    // Absent members owe +1 per missed week
+    pastAbsent.forEach(m => { newAus[m.id] = (newAus[m.id] || 0) + 1; });
+
+    // Present members who got more jobs than normal and completed them earn -1 credit per extra job done
+    // Base = what each person would normally get in a full-attendance week
+    const basePerPerson = pastAssign.length / members.length; // e.g. 4 jobs / 4 members = 1
+    const assignedCount = {};
+    pastAssign.forEach(a => { if (a.memberId) assignedCount[a.memberId] = (assignedCount[a.memberId]||0)+1; });
+
+    pastPresent.forEach(m => {
+      const assigned = assignedCount[m.id] || 0;
+      const extraAssigned = Math.max(0, assigned - basePerPerson);
+      if (extraAssigned > 0) {
+        const myJobs = pastAssign.filter(a => a.memberId === m.id);
+        const doneCount = myJobs.filter(a => pastDone[a.jobId]).length;
+        // Credit only for extra jobs actually completed
+        const extraDone = Math.min(extraAssigned, Math.max(0, doneCount - Math.floor(basePerPerson)));
+        if (extraDone > 0) newAus[m.id] = (newAus[m.id] || 0) - extraDone;
       }
     });
-    if (changed) {
-      setAusgleich(newAus);
-      setProcessedWks(prev => ({...prev, [pastKey]: true}));
-    } else if (pastAssign.length > 0) {
-      setProcessedWks(prev => ({...prev, [pastKey]: true}));
-    }
+
+    setAusgleich(newAus);
+    setProcessedWks(prev => ({...(prev||{}), [pastKey]: true}));
   }, [weekKey]);
 
   function toggle(jobId) {
-    const wasDone = (cleaningDone[weekKey]||{})[jobId];
-    const assignment = assignments.find(a => a.jobId === jobId);
-    // Decrement ausgleich when completing a job (if member had ausgleich)
-    if (!wasDone && assignment && assignment.memberId) {
-      const memberAus = (ausgleich||{})[assignment.memberId] || 0;
-      if (memberAus > 0) {
-        setAusgleich(prev => ({...prev, [assignment.memberId]: Math.max(0, (prev[assignment.memberId]||0) - 1)}));
-      }
-    }
     setCleaningDone(prev=>({...prev,[weekKey]:{...(prev[weekKey]||{}),[jobId]:!(prev[weekKey]||{})[jobId]}}));
   }
 
@@ -614,7 +624,8 @@ function Putzplan({members,jobs,cleaningDone,setCleaningDone,ausgleich,setAusgle
       :members.length===0?<div className="empty"><div className="empty-icon">👥</div><div className="empty-text">Füge Bewohner hinzu.</div></div>
       :<div className="card" style={{padding:0,overflow:'hidden'}}>
         {assignments.map((a,i)=>{
-          const job=jobs.find(j=>j.id===a.jobId), member=a.memberId?members.find(m=>m.id===a.memberId):null;
+          const job=jobs.find(j=>j.id===a.jobId);
+          const member=a.memberId?members.find(m=>m.id===a.memberId):null;
           const done=weekDone[a.jobId]||false;
           if(!job) return null;
           if(!member) return <div key={a.jobId} style={{padding:'15px 16px',borderBottom:i<assignments.length-1?'1px solid var(--border)':'none',fontSize:14,color:'var(--text2)'}}>{job.name} — <span style={{color:'var(--accent)'}}>niemand verfügbar</span></div>;
@@ -624,6 +635,7 @@ function Putzplan({members,jobs,cleaningDone,setCleaningDone,ausgleich,setAusgle
               <div style={{fontSize:15,fontWeight:500,textDecoration:done?'line-through':'none',color:done?'var(--text2)':'var(--text)'}}>{job.name}</div>
               {(job.frequency==='monthly') && <div style={{fontSize:11,color:'var(--accent)',marginTop:1,fontWeight:500}}>monatlich</div>}
               {(ausgleich||{})[member.id] > 0 && <div style={{fontSize:11,color:'var(--accent)',marginTop:1}}>↩️ Ausgleichs-Job</div>}
+              {(ausgleich||{})[member.id] < 0 && <div style={{fontSize:11,color:'var(--success)',marginTop:1}}>⭐ Extra-Job (Guthaben)</div>}
             </div>
             <div style={{display:'flex',alignItems:'center',gap:6}}>
               <Avatar member={member} size={30}/>
@@ -832,10 +844,19 @@ function Bewohner({members,setMembers,ausgleich,setAusgleich}) {
           <div style={{fontSize:12,color:'var(--text2)',marginTop:2,display:'flex',alignItems:'center',gap:6}}>
             Bewohner
             {(ausgleich||{})[member.id] > 0 && (
-              <span style={{background:'rgba(245,158,11,0.15)',color:'var(--accent)',fontSize:11,fontWeight:600,padding:'1px 7px',borderRadius:6,cursor:'pointer'}}
-                onClick={()=>setAusgleich(prev=>({...prev,[member.id]:Math.max(0,(prev[member.id]||1)-1)}))}
-                title="Klicken um Ausgleich zu reduzieren">
+              <span style={{display:'inline-flex',alignItems:'center',gap:4,background:'rgba(245,158,11,0.12)',color:'var(--accent)',fontSize:11,fontWeight:600,padding:'2px 8px',borderRadius:6}}>
                 ↩️ {(ausgleich||{})[member.id]} Ausgleich
+                <span
+                  onClick={e=>{e.stopPropagation();if(confirm('Einen Ausgleich manuell abziehen?'))setAusgleich(prev=>({...prev,[member.id]:(prev[member.id]||1)-1}));}}
+                  style={{cursor:'pointer',color:'var(--accent)',opacity:0.7,fontSize:12,marginLeft:2,lineHeight:1}}>✕</span>
+              </span>
+            )}
+            {(ausgleich||{})[member.id] < 0 && (
+              <span style={{display:'inline-flex',alignItems:'center',gap:4,background:'rgba(34,197,94,0.12)',color:'var(--success)',fontSize:11,fontWeight:600,padding:'2px 8px',borderRadius:6}}>
+                ⭐ {Math.abs((ausgleich||{})[member.id])} Guthaben
+                <span
+                  onClick={e=>{e.stopPropagation();if(confirm('Ein Guthaben manuell abziehen?'))setAusgleich(prev=>({...prev,[member.id]:(prev[member.id]||0)+1}));}}
+                  style={{cursor:'pointer',color:'var(--success)',opacity:0.7,fontSize:12,marginLeft:2,lineHeight:1}}>✕</span>
               </span>
             )}
           </div>
