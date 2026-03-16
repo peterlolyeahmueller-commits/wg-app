@@ -311,21 +311,26 @@ function getAssignments(jobs, members, weekKey, ausgleich) {
   const activeJobs = getJobsForWeek(jobs, members, weekKey);
   if (!activeJobs.length) return [];
 
-  // Sort members by ausgleich descending so people with more owed jobs get assigned first
   const aus = ausgleich || {};
-  const sorted = [...members].sort((a, b) => (aus[b.id] || 0) - (aus[a.id] || 0));
+
+  // Only anwesende members get jobs assigned
+  const anwesend = members.filter(m => !isMemberAway(m, weekKey));
+  if (!anwesend.length) return activeJobs.map(job => ({ jobId: job.id, memberId: null, absent: true }));
+
+  // Sort anwesende: most ausgleich first, then normal rotation order
+  const rotationOrder = [...anwesend].sort((a, b) => {
+    const ausgleichDiff = (aus[b.id] || 0) - (aus[a.id] || 0);
+    if (ausgleichDiff !== 0) return ausgleichDiff;
+    // fallback: keep original rotation order
+    const ai = members.indexOf(members.find(m => m.id === a.id));
+    const bi = members.indexOf(members.find(m => m.id === b.id));
+    return ((ai - wn) % members.length + members.length) % members.length -
+           ((bi - wn) % members.length + members.length) % members.length;
+  });
 
   return activeJobs.map((job, i) => {
-    // Use sorted order for ausgleich priority, fall back to normal rotation
-    const topAus = sorted.filter(m => (aus[m.id] || 0) > 0);
-    let member;
-    if (topAus.length > 0 && i < topAus.length) {
-      member = topAus[i % topAus.length];
-    } else {
-      member = members[(wn + i) % members.length];
-    }
-    const absent = isMemberAway(member, weekKey);
-    return { jobId: job.id, memberId: member.id, absent };
+    const member = rotationOrder[i % rotationOrder.length];
+    return { jobId: job.id, memberId: member.id, absent: false };
   });
 }
 
@@ -570,7 +575,7 @@ function Putzplan({members,jobs,cleaningDone,setCleaningDone,ausgleich,setAusgle
     const wasDone = (cleaningDone[weekKey]||{})[jobId];
     const assignment = assignments.find(a => a.jobId === jobId);
     // Decrement ausgleich when completing a job (if member had ausgleich)
-    if (!wasDone && assignment) {
+    if (!wasDone && assignment && assignment.memberId) {
       const memberAus = (ausgleich||{})[assignment.memberId] || 0;
       if (memberAus > 0) {
         setAusgleich(prev => ({...prev, [assignment.memberId]: Math.max(0, (prev[assignment.memberId]||0) - 1)}));
@@ -609,17 +614,18 @@ function Putzplan({members,jobs,cleaningDone,setCleaningDone,ausgleich,setAusgle
       :members.length===0?<div className="empty"><div className="empty-icon">👥</div><div className="empty-text">Füge Bewohner hinzu.</div></div>
       :<div className="card" style={{padding:0,overflow:'hidden'}}>
         {assignments.map((a,i)=>{
-          const job=jobs.find(j=>j.id===a.jobId), member=members.find(m=>m.id===a.memberId);
+          const job=jobs.find(j=>j.id===a.jobId), member=a.memberId?members.find(m=>m.id===a.memberId):null;
           const done=weekDone[a.jobId]||false;
-          if(!job||!member) return null;
-          return <div key={a.jobId} style={{display:'flex',alignItems:'center',gap:14,padding:'15px 16px',borderBottom:i<assignments.length-1?'1px solid var(--border)':'none',background:done?'rgba(34,197,94,0.05)':a.absent?'rgba(245,158,11,0.03)':'transparent',transition:'background 0.2s'}}>
-            <CheckBox checked={done} onChange={()=>toggle(a.jobId)} color={a.absent?'var(--accent)':member.color}/>
+          if(!job) return null;
+          if(!member) return <div key={a.jobId} style={{padding:'15px 16px',borderBottom:i<assignments.length-1?'1px solid var(--border)':'none',fontSize:14,color:'var(--text2)'}}>{job.name} — <span style={{color:'var(--accent)'}}>niemand verfügbar</span></div>;
+          return <div key={a.jobId} style={{display:'flex',alignItems:'center',gap:14,padding:'15px 16px',borderBottom:i<assignments.length-1?'1px solid var(--border)':'none',background:done?'rgba(34,197,94,0.05)':'transparent',transition:'background 0.2s'}}>
+            <CheckBox checked={done} onChange={()=>toggle(a.jobId)} color={member.color}/>
             <div style={{flex:1}}>
               <div style={{fontSize:15,fontWeight:500,textDecoration:done?'line-through':'none',color:done?'var(--text2)':'var(--text)'}}>{job.name}</div>
               {(job.frequency==='monthly') && <div style={{fontSize:11,color:'var(--accent)',marginTop:1,fontWeight:500}}>monatlich</div>}
+              {(ausgleich||{})[member.id] > 0 && <div style={{fontSize:11,color:'var(--accent)',marginTop:1}}>↩️ Ausgleichs-Job</div>}
             </div>
             <div style={{display:'flex',alignItems:'center',gap:6}}>
-              {a.absent && <span style={{fontSize:11,color:'var(--accent)',fontWeight:500,background:'rgba(245,158,11,0.1)',padding:'2px 7px',borderRadius:6}}>abwesend</span>}
               <Avatar member={member} size={30}/>
             </div>
           </div>;
