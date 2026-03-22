@@ -22,28 +22,31 @@
       --success:#22c55e; --danger:#ef4444;
       --radius:14px; --radius-sm:9px;
     }
-    html,body { height:100%; overscroll-behavior:none; }
+    html, body { height:100%; }
     body {
+      overflow:hidden;
       background:var(--bg); color:var(--text);
       font-family:'DM Sans',sans-serif;
-      overflow-x:hidden; -webkit-tap-highlight-color:transparent;
+      -webkit-tap-highlight-color:transparent;
       -webkit-text-size-adjust:100%;
+      overscroll-behavior:none;
     }
-    #root { min-height:100%; display:flex; flex-direction:column; max-width:500px; margin:0 auto; }
+    #root { height:100%; display:flex; flex-direction:column; max-width:500px; margin:0 auto; }
     ::-webkit-scrollbar { width:3px; }
     ::-webkit-scrollbar-thumb { background:var(--border2); border-radius:2px; }
     .font-syne { font-family:'Syne',sans-serif; }
     .app-header {
-      padding:20px 20px 12px; display:flex; align-items:center; justify-content:space-between;
-      position:sticky; top:0; z-index:50; background:var(--bg); border-bottom:1px solid var(--border);
+      flex-shrink:0;
+      padding:16px 20px 12px; display:flex; align-items:center; justify-content:space-between;
+      background:var(--bg); border-bottom:1px solid var(--border); z-index:50;
     }
     .app-logo { font-family:'Syne',sans-serif; font-weight:800; font-size:20px; color:var(--accent); letter-spacing:-0.3px; }
     .app-date { font-size:12px; color:var(--text2); }
-    .content { flex:1; padding:18px 18px 110px; overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; }
+    .content { flex:1; min-height:0; padding:18px 18px 120px; overflow-y:auto; -webkit-overflow-scrolling:touch; }
     .bottom-nav {
       position:fixed; bottom:0; left:50%; transform:translateX(-50%);
       width:100%; max-width:500px; background:var(--bg2); border-top:1px solid var(--border);
-      display:flex; padding:10px 6px env(safe-area-inset-bottom,10px); z-index:100;
+      display:flex; padding:10px 6px env(safe-area-inset-bottom,12px); z-index:100;
     }
     .nav-btn {
       flex:1; display:flex; flex-direction:column; align-items:center; gap:3px;
@@ -225,8 +228,8 @@ function weekNumber(weekKey) {
   return Math.ceil(((d-jan1)/86400000+jan1.getDay()+1)/7);
 }
 function isMemberAway(member, weekKey) {
-  const mon = new Date(weekKey), sun = addDays(mon,6);
-  return (member.absences||[]).some(a => { const f=new Date(a.from),t=new Date(a.to); return f<=sun&&t>=mon; });
+  const mon = parseLocal(weekKey), sun = addDays(mon,6);
+  return (member.absences||[]).some(a => { const f=parseLocal(a.from),t=parseLocal(a.to); return f<=sun&&t>=mon; });
 }
 
 /* ═══ FIREBASE HOOK ═══ */
@@ -241,9 +244,12 @@ function useFirebase(path, defaultValue) {
     ref.on('value', snap => {
       const data = snap.val();
       if (data !== null) {
-        setValue(data);
+        // Firebase may return arrays as objects with numeric keys — convert back
+        const parsed = Array.isArray(defaultValue) && data !== null && typeof data === 'object' && !Array.isArray(data)
+          ? Object.values(data)
+          : data;
+        setValue(parsed);
       } else if (!initialized.current) {
-        // First time: write defaults
         ref.set(defaultValue);
         setValue(defaultValue);
       }
@@ -487,32 +493,24 @@ function Dashboard({members,jobs,cleaningDone,purchases,pins,setPins,ausgleich,s
         </div>)}
       </div>
     </div>}
-        {assignments.length>0&&<div className="card">
+    {assignments.length>0&&<div className="card">
       <div className="card-label">Putzplan diese Woche</div>
       {assignments.map(a=>{
-        const job=jobs.find(j=>j.id===a.jobId), member=members.find(m=>m.id===a.memberId);
+        const job=jobs.find(j=>j.id===a.jobId);
+        const member=a.memberId?members.find(m=>m.id===a.memberId):null;
         const done=weekDone[a.jobId];
         if(!job||!member) return null;
         return <div key={a.jobId} className="row-item">
-          <div style={{width:4,height:36,borderRadius:4,background:done?'var(--success)':a.absent?'var(--accent)':member.color,flexShrink:0}}/>
+          <div style={{width:4,height:36,borderRadius:4,background:done?'var(--success)':member.color,flexShrink:0}}/>
           <div style={{flex:1}}>
             <div style={{fontSize:14,fontWeight:500,textDecoration:done?'line-through':'none',color:done?'var(--text2)':'var(--text)'}}>{job.name}</div>
           </div>
           <div className="flex items-center gap-2">
             {done&&<span style={{color:'var(--success)',fontSize:13}}>erledigt</span>}
-            {a.absent&&!done&&<span style={{fontSize:11,color:'var(--accent)',fontWeight:500}}>abwesend</span>}
             <Avatar member={member} size={26}/>
           </div>
         </div>;
       })}
-    </div>}
-    {awayNow.length>0&&<div className="card">
-      <div className="card-label">Diese Woche weg ✈️</div>
-      <div className="flex gap-2" style={{flexWrap:'wrap'}}>
-        {awayNow.map(m=><div key={m.id} style={{display:'flex',alignItems:'center',gap:8,background:'var(--bg3)',border:'1px solid var(--border)',borderRadius:10,padding:'7px 12px'}}>
-          <Avatar member={m} size={24}/><span style={{fontSize:13}}>{m.name}</span>
-        </div>)}
-      </div>
     </div>}
     {openP.length>0&&<div className="card" style={{cursor:'pointer'}} onClick={()=>setActiveTab('einkaufe')}>
       <div className="card-label">Offene Überweisungen 💸</div>
@@ -550,7 +548,6 @@ function Putzplan({members,jobs,cleaningDone,setCleaningDone,ausgleich,setAusgle
   const isCurrentWeek = weekKey===currentWeekKey;
   const assignments = useMemo(()=>getAssignments(jobs,members,weekKey,ausgleich),[jobs,members,weekKey,ausgleich]);
   const weekDone = cleaningDone[weekKey]||{};
-  const awayThisWeek = members.filter(m=>isMemberAway(m,weekKey));
 
   // Week-end processing: calculate ausgleich for previous week
   useEffect(() => {
@@ -644,10 +641,7 @@ function Putzplan({members,jobs,cleaningDone,setCleaningDone,ausgleich,setAusgle
           </div>;
         })}
       </div>}
-      {awayThisWeek.length>0&&<div style={{marginTop:10,padding:'10px 14px',background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:10,display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
-        <span style={{fontSize:12,color:'var(--text2)'}}>✈️ Weg:</span>
-        {awayThisWeek.map(m=><span key={m.id} style={{fontSize:12,color:m.color,fontWeight:500}}>{m.name}</span>)}
-      </div>}
+
     </>:<>
       <div className="week-nav">
         <button className="icon-btn" onClick={()=>{const d=new Date(weekKey);d.setMonth(d.getMonth()-1);setWeekKey(getWeekKey(d));}}>←</button>
@@ -783,7 +777,7 @@ function ColorDropdown({value, takenColors, onChange}) {
     <div style={{position:'relative'}} ref={ref}>
       <div className="color-dropdown-btn" onClick={()=>setOpen(o=>!o)}>
         <div style={{width:22,height:22,borderRadius:'50%',background:value,flexShrink:0,border:'2px solid rgba(255,255,255,0.2)'}}/>
-        <span style={{flex:1,fontSize:13,color:'var(--text2)'}}>Farbe wählen</span>
+        <span style={{flex:1}}/>
         <span style={{color:'var(--text3)',fontSize:12}}>{open?'▲':'▼'}</span>
       </div>
       {open && <div className="color-dropdown-panel">
@@ -1099,7 +1093,7 @@ function PinScreen({onUnlock, isSetup, existingPin}) {
 /* ═══ APP ROOT ═══ */
 function App() {
   const [tab,setRawTab] = useState('dashboard');
-  function setTab(t) { setRawTab(t); window.scrollTo(0,0); }
+  function setTab(t) { setRawTab(t); setTimeout(()=>document.querySelector('.content')?.scrollTo(0,0),0); }
   const [unlocked, setUnlocked] = useState(false);
   const [members, setMembers, loadingM, syncingM] = useFirebase('members', DEFAULT_MEMBERS);
   const [jobs,    setJobs,    loadingJ, syncingJ] = useFirebase('jobs',    DEFAULT_JOBS);
@@ -1136,29 +1130,27 @@ function App() {
   if (!unlocked) {
     if (appPin === 'unset') {
       // First time: setup PIN
-      return <PinScreen isSetup={true} onUnlock={pin => { setAppPin(pin); setUnlocked(true); window.scrollTo(0,0); }} />;
+      return <PinScreen isSetup={true} onUnlock={pin => { setAppPin(pin); setUnlocked(true); setTimeout(()=>document.querySelector('.content')?.scrollTo(0,0),50); }} />;
     }
-    return <PinScreen isSetup={false} existingPin={appPin} onUnlock={() => { setUnlocked(true); window.scrollTo(0,0); }} />;
+    return <PinScreen isSetup={false} existingPin={appPin} onUnlock={() => { setUnlocked(true); setTimeout(()=>document.querySelector('.content')?.scrollTo(0,0),50); }} />;
   }
 
   const today = new Date().toLocaleDateString('de-DE',{weekday:'long',day:'2-digit',month:'short'});
 
   return <>
-    <div style={{minHeight:'100vh',background:'linear-gradient(160deg,#0e0e0e 0%,#141210 100%)'}}>
-      <div className="app-header">
-        <div className="app-logo">🏠 WG Eifelwall</div>
-        <div className="flex items-center gap-2">
-          <div className={`sync-dot ${syncing?'syncing':''}`} title={syncing?'Speichert …':'Alles gespeichert'}/>
-          <div className="app-date">{today}</div>
-        </div>
+    <div className="app-header">
+      <div className="app-logo">🏠 WG Eifelwall</div>
+      <div className="flex items-center gap-2">
+        <div className={`sync-dot ${syncing?'syncing':''}`} title={syncing?'Speichert …':'Alles gespeichert'}/>
+        <div className="app-date">{today}</div>
       </div>
-      <div className="content">
-        {tab==='dashboard'&&<Dashboard members={members} jobs={jobs} cleaningDone={cleaningDone} purchases={purchases} pins={pins} setPins={setPins} ausgleich={ausgleich} setActiveTab={setTab}/>}
-        {tab==='putzplan' &&<Putzplan  members={members} jobs={jobs} cleaningDone={cleaningDone} setCleaningDone={setCleaningDone} ausgleich={ausgleich} setAusgleich={setAusgleich} processedWks={processedWks} setProcessedWks={setProcessedWks}/>}
-        {tab==='einkaufe' &&<WGEinkaufe members={members} purchases={purchases} setPurchases={setPurchases}/>}
-        {tab==='bewohner' &&<Bewohner  members={members} setMembers={setMembers} ausgleich={ausgleich} setAusgleich={setAusgleich}/>}
-        {tab==='jobs'     &&<Jobs      jobs={jobs} setJobs={setJobs}/>}
-      </div>
+    </div>
+    <div className="content">
+      {tab==='dashboard'&&<Dashboard members={members} jobs={jobs} cleaningDone={cleaningDone} purchases={purchases} pins={pins} setPins={setPins} ausgleich={ausgleich} setActiveTab={setTab}/>}
+      {tab==='putzplan' &&<Putzplan  members={members} jobs={jobs} cleaningDone={cleaningDone} setCleaningDone={setCleaningDone} ausgleich={ausgleich} setAusgleich={setAusgleich} processedWks={processedWks} setProcessedWks={setProcessedWks}/>}
+      {tab==='einkaufe' &&<WGEinkaufe members={members} purchases={purchases} setPurchases={setPurchases}/>}
+      {tab==='bewohner' &&<Bewohner  members={members} setMembers={setMembers} ausgleich={ausgleich} setAusgleich={setAusgleich}/>}
+      {tab==='jobs'     &&<Jobs      jobs={jobs} setJobs={setJobs}/>}
     </div>
     <div className="bottom-nav">
       {tabs.map(t=><button key={t.id} className={`nav-btn ${tab===t.id?'active':''}`} onClick={()=>setTab(t.id)}>
