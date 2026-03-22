@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>🏠 WG Eifelwall</title>
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
   <!-- Firebase compat SDK -->
@@ -22,11 +22,12 @@
       --success:#22c55e; --danger:#ef4444;
       --radius:14px; --radius-sm:9px;
     }
-    html,body { height:100%; }
+    html,body { height:100%; overscroll-behavior:none; }
     body {
       background:var(--bg); color:var(--text);
       font-family:'DM Sans',sans-serif;
       overflow-x:hidden; -webkit-tap-highlight-color:transparent;
+      -webkit-text-size-adjust:100%;
     }
     #root { min-height:100%; display:flex; flex-direction:column; max-width:500px; margin:0 auto; }
     ::-webkit-scrollbar { width:3px; }
@@ -38,7 +39,7 @@
     }
     .app-logo { font-family:'Syne',sans-serif; font-weight:800; font-size:20px; color:var(--accent); letter-spacing:-0.3px; }
     .app-date { font-size:12px; color:var(--text2); }
-    .content { flex:1; padding:18px 18px 110px; overflow-y:auto; }
+    .content { flex:1; padding:18px 18px 110px; overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; }
     .bottom-nav {
       position:fixed; bottom:0; left:50%; transform:translateX(-50%);
       width:100%; max-width:500px; background:var(--bg2); border-top:1px solid var(--border);
@@ -64,7 +65,7 @@
     .btn-xs { padding:5px 9px; font-size:12px; border-radius:7px; }
     input,textarea,select {
       background:var(--bg3); border:1px solid var(--border); border-radius:var(--radius-sm);
-      color:var(--text); font-family:'DM Sans',sans-serif; font-size:14px; padding:10px 13px;
+      color:var(--text); font-family:'DM Sans',sans-serif; font-size:16px; padding:10px 13px;
       outline:none; width:100%; transition:border-color 0.15s; -webkit-appearance:none;
     }
     input:focus,textarea:focus,select:focus { border-color:var(--accent); }
@@ -137,7 +138,7 @@
     .month-week:last-child { border-bottom:none; }
     .purchase-section-label { font-size:11px; font-weight:600; color:var(--text2); text-transform:uppercase; letter-spacing:0.8px; padding:10px 16px; background:rgba(0,0,0,0.2); border-bottom:1px solid var(--border); }
     /* PIN Screen */
-    .pin-screen { position:fixed; inset:0; background:var(--bg); z-index:1000; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px 32px; }
+    .pin-screen { position:fixed; inset:0; background:var(--bg); z-index:1000; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px 32px; overflow:hidden; touch-action:none; }
     .pin-logo { font-family:'Syne',sans-serif; font-weight:800; font-size:28px; color:var(--accent); margin-bottom:8px; }
     .pin-subtitle { font-size:13px; color:var(--text2); margin-bottom:48px; }
     .pin-dots { display:flex; gap:14px; margin-bottom:40px; }
@@ -1097,7 +1098,8 @@ function PinScreen({onUnlock, isSetup, existingPin}) {
 
 /* ═══ APP ROOT ═══ */
 function App() {
-  const [tab,setTab] = useState('dashboard');
+  const [tab,setRawTab] = useState('dashboard');
+  function setTab(t) { setRawTab(t); window.scrollTo(0,0); }
   const [unlocked, setUnlocked] = useState(false);
   const [members, setMembers, loadingM, syncingM] = useFirebase('members', DEFAULT_MEMBERS);
   const [jobs,    setJobs,    loadingJ, syncingJ] = useFirebase('jobs',    DEFAULT_JOBS);
@@ -1134,9 +1136,9 @@ function App() {
   if (!unlocked) {
     if (appPin === 'unset') {
       // First time: setup PIN
-      return <PinScreen isSetup={true} onUnlock={pin => { setAppPin(pin); setUnlocked(true); }} />;
+      return <PinScreen isSetup={true} onUnlock={pin => { setAppPin(pin); setUnlocked(true); window.scrollTo(0,0); }} />;
     }
-    return <PinScreen isSetup={false} existingPin={appPin} onUnlock={() => setUnlocked(true)} />;
+    return <PinScreen isSetup={false} existingPin={appPin} onUnlock={() => { setUnlocked(true); window.scrollTo(0,0); }} />;
   }
 
   const today = new Date().toLocaleDateString('de-DE',{weekday:'long',day:'2-digit',month:'short'});
