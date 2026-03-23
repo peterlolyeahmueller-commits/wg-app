@@ -5,199 +5,146 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>🏠 WG Eifelwall</title>
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
-  <!-- Firebase compat SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
-  <!-- React -->
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-      --bg:#0e0e0e; --bg2:#181818; --bg3:#222222;
-      --border:#2c2c2c; --border2:#383838;
-      --text:#f0ede8; --text2:#888; --text3:#555;
-      --accent:#f59e0b; --accent2:#d97706;
-      --success:#22c55e; --danger:#ef4444;
-      --radius:14px; --radius-sm:9px;
+      --bg: #0e0e0e; --bg2: #181818; --bg3: #222222;
+      --border: #2c2c2c; --border2: #383838;
+      --text: #f0ede8; --text2: #888; --text3: #555;
+      --accent: #f59e0b; --accent2: #d97706;
+      --success: #22c55e; --danger: #ef4444;
+      --radius: 14px; --radius-sm: 9px;
     }
-    html, body { height:100%; }
-    body {
-      overflow:hidden;
-      background:var(--bg); color:var(--text);
-      font-family:'DM Sans',sans-serif;
-      -webkit-tap-highlight-color:transparent;
-      -webkit-text-size-adjust:100%;
-      overscroll-behavior:none;
-    }
-    #root { height:100%; display:flex; flex-direction:column; max-width:500px; margin:0 auto; }
-    ::-webkit-scrollbar { width:3px; }
-    ::-webkit-scrollbar-thumb { background:var(--border2); border-radius:2px; }
-    .font-syne { font-family:'Syne',sans-serif; }
-    .app-header {
-      flex-shrink:0;
-      padding:16px 20px 12px; display:flex; align-items:center; justify-content:space-between;
-      background:var(--bg); border-bottom:1px solid var(--border); z-index:50;
-    }
-    .app-logo { font-family:'Syne',sans-serif; font-weight:800; font-size:20px; color:var(--accent); letter-spacing:-0.3px; }
-    .app-date { font-size:12px; color:var(--text2); }
-    .content { flex:1; min-height:0; padding:18px 18px 120px; overflow-y:auto; -webkit-overflow-scrolling:touch; }
-    .bottom-nav {
-      position:fixed; bottom:0; left:50%; transform:translateX(-50%);
-      width:100%; max-width:500px; background:var(--bg2); border-top:1px solid var(--border);
-      display:flex; padding:10px 6px env(safe-area-inset-bottom,12px); z-index:100;
-    }
-    .nav-btn {
-      flex:1; display:flex; flex-direction:column; align-items:center; gap:3px;
-      background:none; border:none; color:var(--text3); cursor:pointer;
-      padding:6px 2px; border-radius:10px; transition:color 0.15s; font-family:'DM Sans',sans-serif;
-    }
-    .nav-btn.active { color:var(--accent); }
-    .nav-icon { font-size:22px; line-height:1; }
-    .nav-label { font-size:10px; font-weight:500; letter-spacing:0.2px; }
-    .card { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); padding:16px; margin-bottom:12px; }
-    .card-label { font-size:11px; font-weight:600; color:var(--text2); text-transform:uppercase; letter-spacing:0.8px; margin-bottom:12px; }
-    .btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:10px 18px; border-radius:var(--radius-sm); border:none; font-family:'DM Sans',sans-serif; font-size:14px; font-weight:500; cursor:pointer; transition:all 0.15s; white-space:nowrap; }
-    .btn-primary { background:var(--accent); color:#0a0a0a; font-weight:600; }
-    .btn-primary:hover { background:var(--accent2); }
-    .btn-primary:active { transform:scale(0.97); }
-    .btn-ghost { background:var(--bg3); color:var(--text); border:1px solid var(--border); }
-    .btn-ghost:hover { background:var(--border); }
-    .btn-sm { padding:7px 12px; font-size:13px; border-radius:8px; }
-    .btn-xs { padding:5px 9px; font-size:12px; border-radius:7px; }
-    input,textarea,select {
-      background:var(--bg3); border:1px solid var(--border); border-radius:var(--radius-sm);
-      color:var(--text); font-family:'DM Sans',sans-serif; font-size:16px; padding:10px 13px;
-      outline:none; width:100%; transition:border-color 0.15s; -webkit-appearance:none;
-    }
-    input:focus,textarea:focus,select:focus { border-color:var(--accent); }
-    input[type="date"] { color-scheme:dark; }
-    select option { background:var(--bg3); }
-    textarea { resize:none; }
-    label { display:block; font-size:12px; font-weight:500; color:var(--text2); margin-bottom:5px; }
-    .form-group { margin-bottom:14px; }
-    .avatar { border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700; color:#000; flex-shrink:0; font-family:'Syne',sans-serif; }
-    .check-box { width:24px; height:24px; border-radius:7px; border:2px solid var(--border2); display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; transition:all 0.15s; }
-    .check-box.checked { border-width:0; }
-    .check-tick { color:#000; font-size:13px; font-weight:800; }
-    .section-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
-    .section-title { font-family:'Syne',sans-serif; font-size:22px; font-weight:800; letter-spacing:-0.5px; }
-    .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:300; display:flex; align-items:flex-end; animation:fadeIn 0.15s; }
-    @keyframes fadeIn { from{opacity:0} to{opacity:1} }
-    .modal { background:var(--bg2); border-radius:22px 22px 0 0; padding:24px 20px 44px; width:100%; max-width:500px; margin:0 auto; border-top:1px solid var(--border); animation:slideUp 0.2s cubic-bezier(.16,1,.3,1); }
-    @keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
-    .modal-title { font-family:'Syne',sans-serif; font-size:19px; font-weight:700; margin-bottom:20px; }
-    .week-nav { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); padding:10px 14px; }
-    .week-label { font-family:'Syne',sans-serif; font-size:14px; font-weight:700; }
-    .icon-btn { background:var(--bg3); border:1px solid var(--border); color:var(--text); width:32px; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:14px; transition:all 0.15s; }
-    .icon-btn:hover { background:var(--border); }
-    .icon-btn:active { transform:scale(0.93); }
-    .tab-switch { display:flex; background:var(--bg3); border-radius:11px; padding:3px; margin-bottom:14px; border:1px solid var(--border); }
-    .tab-switch-btn { flex:1; padding:8px; border:none; border-radius:8px; background:transparent; color:var(--text2); font-family:'DM Sans',sans-serif; font-size:13px; font-weight:500; cursor:pointer; transition:all 0.15s; }
-    .tab-switch-btn.active { background:var(--bg2); color:var(--text); border:1px solid var(--border); }
-    .color-picker { display:flex; gap:9px; flex-wrap:wrap; }
-    .color-swatch { width:30px; height:30px; border-radius:50%; cursor:pointer; border:3px solid transparent; transition:all 0.15s; flex-shrink:0; }
-    .color-swatch.selected { border-color:#fff; box-shadow:0 0 0 2px rgba(255,255,255,0.3); transform:scale(1.1); }
-    .color-dropdown-btn { display:flex; align-items:center; gap:9px; background:var(--bg3); border:1px solid var(--border); border-radius:var(--radius-sm); padding:9px 12px; cursor:pointer; width:100%; position:relative; }
-    .color-dropdown-btn:hover { border-color:var(--border2); }
-    .color-dropdown-panel { position:absolute; top:calc(100% + 6px); left:0; right:0; background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:12px; z-index:200; display:flex; flex-wrap:wrap; gap:10px; box-shadow:0 8px 24px rgba(0,0,0,0.5); animation:fadeIn 0.1s; }
-    .color-opt { width:28px; height:28px; border-radius:50%; border:2px solid transparent; transition:all 0.15s; flex-shrink:0; }
-    .color-opt.available { cursor:pointer; }
-    .color-opt.available:hover { transform:scale(1.15); }
-    .color-opt.selected { border-color:#fff; box-shadow:0 0 0 2px rgba(255,255,255,0.3); cursor:pointer; }
-    .color-opt.taken { opacity:0.2; cursor:not-allowed; }
-    .absence-tag { display:inline-flex; align-items:center; gap:5px; background:var(--bg3); border:1px solid var(--border); border-radius:8px; padding:5px 9px; font-size:12px; margin:3px 3px 3px 0; }
-    .tag-del { cursor:pointer; color:var(--text2); transition:color 0.1s; padding:0 1px; }
-    .tag-del:hover { color:var(--danger); }
-    .divider { height:1px; background:var(--border); margin:14px 0; }
-    .empty { text-align:center; padding:50px 20px; color:var(--text2); }
-    .empty-icon { font-size:44px; margin-bottom:12px; }
-    .empty-text { font-size:14px; }
-    .flex { display:flex; }
-    .flex-col { flex-direction:column; }
-    .items-center { align-items:center; }
-    .justify-between { justify-content:space-between; }
-    .gap-2 { gap:8px; }
-    .gap-3 { gap:12px; }
-    .flex-1 { flex:1; min-width:0; }
-    .mt-2 { margin-top:8px; }
-    .mt-3 { margin-top:14px; }
-    .text-sm { font-size:13px; }
-    .text-muted { color:var(--text2); }
-    .fw-600 { font-weight:600; }
-    .truncate { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    .row-item { display:flex; align-items:center; gap:12px; padding:13px 0; border-bottom:1px solid var(--border); }
-    .row-item:last-child { border-bottom:none; padding-bottom:0; }
-    .row-item:first-child { padding-top:0; }
-    .job-card { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); margin-bottom:10px; overflow:hidden; }
-    .job-card-header { display:flex; align-items:center; gap:10px; padding:14px 16px; cursor:pointer; user-select:none; }
-    .job-card-body { padding:14px 16px; border-top:1px solid var(--border); background:rgba(0,0,0,0.15); }
-    .stats-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px; }
-    .stat-card { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); padding:14px; cursor:pointer; transition:border-color 0.15s; text-align:center; }
-    .stat-num { font-family:'Syne',sans-serif; font-weight:800; font-size:30px; line-height:1; margin-bottom:4px; }
-    .stat-label { font-size:11px; color:var(--text2); }
-    .month-week { padding:11px 0; border-bottom:1px solid var(--border); }
-    .month-week:last-child { border-bottom:none; }
-    .purchase-section-label { font-size:11px; font-weight:600; color:var(--text2); text-transform:uppercase; letter-spacing:0.8px; padding:10px 16px; background:rgba(0,0,0,0.2); border-bottom:1px solid var(--border); }
-    /* PIN Screen */
-    .pin-screen { position:fixed; inset:0; background:var(--bg); z-index:1000; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px 32px; overflow:hidden; touch-action:none; }
-    .pin-logo { font-family:'Syne',sans-serif; font-weight:800; font-size:28px; color:var(--accent); margin-bottom:8px; }
-    .pin-subtitle { font-size:13px; color:var(--text2); margin-bottom:48px; }
-    .pin-dots { display:flex; gap:14px; margin-bottom:40px; }
-    .pin-dot { width:14px; height:14px; border-radius:50%; border:2px solid var(--border2); transition:all 0.15s; }
-    .pin-dot.filled { background:var(--accent); border-color:var(--accent); }
-    .pin-dot.error { background:var(--danger); border-color:var(--danger); animation:shake 0.3s; }
+    html, body { height: 100%; }
+    body { overflow: hidden; background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; -webkit-tap-highlight-color: transparent; -webkit-text-size-adjust: 100%; overscroll-behavior: none; }
+    #root { height: 100%; display: flex; flex-direction: column; max-width: 500px; margin: 0 auto; }
+    ::-webkit-scrollbar { width: 3px; }
+    ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+    .app-header { flex-shrink: 0; padding: 16px 20px 12px; display: flex; align-items: center; justify-content: space-between; background: var(--bg); border-bottom: 1px solid var(--border); z-index: 50; }
+    .app-logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 20px; color: var(--accent); }
+    .app-date { font-size: 12px; color: var(--text2); }
+    .content { flex: 1; min-height: 0; padding: 18px 18px 120px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+    .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 500px; background: var(--bg2); border-top: 1px solid var(--border); display: flex; padding: 10px 6px env(safe-area-inset-bottom, 12px); z-index: 100; }
+    .nav-btn { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; background: none; border: none; color: var(--text3); cursor: pointer; padding: 6px 2px; border-radius: 10px; transition: color 0.15s; font-family: 'DM Sans', sans-serif; }
+    .nav-btn.active { color: var(--accent); }
+    .nav-icon { font-size: 22px; line-height: 1; }
+    .nav-label { font-size: 10px; font-weight: 500; }
+    .card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 12px; }
+    .card-label { font-size: 11px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 12px; }
+    .section-title { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
+    .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 10px 18px; border-radius: var(--radius-sm); border: none; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+    .btn-primary { background: var(--accent); color: #0a0a0a; font-weight: 600; }
+    .btn-primary:active { transform: scale(0.97); }
+    .btn-ghost { background: var(--bg3); color: var(--text); border: 1px solid var(--border); }
+    .btn-sm { padding: 7px 12px; font-size: 13px; border-radius: 8px; }
+    .btn-xs { padding: 5px 9px; font-size: 12px; border-radius: 7px; }
+    input, textarea, select { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 16px; padding: 10px 13px; outline: none; width: 100%; transition: border-color 0.15s; -webkit-appearance: none; }
+    input:focus, textarea:focus, select:focus { border-color: var(--accent); }
+    input[type="date"] { color-scheme: dark; }
+    select option { background: var(--bg3); }
+    textarea { resize: none; }
+    label { display: block; font-size: 12px; font-weight: 500; color: var(--text2); margin-bottom: 5px; }
+    .form-group { margin-bottom: 14px; }
+    .tab-switch { display: flex; background: var(--bg3); border-radius: 11px; padding: 3px; margin-bottom: 14px; border: 1px solid var(--border); }
+    .tab-switch-btn { flex: 1; padding: 8px; border: none; border-radius: 8px; background: transparent; color: var(--text2); font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; }
+    .tab-switch-btn.active { background: var(--bg2); color: var(--text); border: 1px solid var(--border); }
+    .week-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 14px; }
+    .week-label { font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; }
+    .icon-btn { background: var(--bg3); border: 1px solid var(--border); color: var(--text); width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 14px; transition: all 0.15s; }
+    .icon-btn:active { transform: scale(0.93); }
+    .row-item { display: flex; align-items: center; gap: 12px; padding: 13px 0; border-bottom: 1px solid var(--border); }
+    .row-item:last-child { border-bottom: none; padding-bottom: 0; }
+    .row-item:first-child { padding-top: 0; }
+    .avatar { border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; color: #000; flex-shrink: 0; font-family: 'Syne', sans-serif; }
+    .check-box { width: 24px; height: 24px; border-radius: 7px; border: 2px solid var(--border2); display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; transition: all 0.15s; }
+    .check-box.checked { border-width: 0; }
+    .check-tick { color: #000; font-size: 13px; font-weight: 800; }
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 300; display: flex; align-items: flex-end; animation: fadeIn 0.15s; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .modal { background: var(--bg2); border-radius: 22px 22px 0 0; padding: 24px 20px 44px; width: 100%; max-width: 500px; margin: 0 auto; border-top: 1px solid var(--border); animation: slideUp 0.2s cubic-bezier(.16,1,.3,1); }
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    .modal-title { font-family: 'Syne', sans-serif; font-size: 19px; font-weight: 700; }
+    .color-dropdown-btn { display: flex; align-items: center; gap: 9px; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 9px 12px; cursor: pointer; width: 100%; }
+    .color-dropdown-panel { position: absolute; top: calc(100% + 6px); left: 0; right: 0; background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px; z-index: 200; display: flex; flex-wrap: wrap; gap: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); animation: fadeIn 0.1s; }
+    .color-opt { width: 28px; height: 28px; border-radius: 50%; border: 2px solid transparent; transition: all 0.15s; flex-shrink: 0; cursor: pointer; }
+    .color-opt:hover { transform: scale(1.15); }
+    .color-opt.selected { border-color: #fff; box-shadow: 0 0 0 2px rgba(255,255,255,0.3); }
+    .color-opt.taken { opacity: 0.2; cursor: not-allowed; }
+    .color-opt.taken:hover { transform: none; }
+    .absence-tag { display: inline-flex; align-items: center; gap: 5px; background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 5px 9px; font-size: 12px; margin: 3px 3px 3px 0; }
+    .tag-del { cursor: pointer; color: var(--text2); transition: color 0.1s; }
+    .tag-del:hover { color: var(--danger); }
+    .job-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 10px; overflow: hidden; }
+    .job-card-header { display: flex; align-items: center; gap: 10px; padding: 14px 16px; cursor: pointer; user-select: none; }
+    .job-card-body { padding: 14px 16px; border-top: 1px solid var(--border); background: rgba(0,0,0,0.15); }
+    .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+    .stat-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; cursor: pointer; text-align: center; }
+    .stat-num { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 30px; line-height: 1; margin-bottom: 4px; }
+    .stat-label { font-size: 11px; color: var(--text2); }
+    .month-week { padding: 11px 0; border-bottom: 1px solid var(--border); }
+    .month-week:last-child { border-bottom: none; }
+    .purchase-section-label { font-size: 11px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.8px; padding: 10px 16px; background: rgba(0,0,0,0.2); border-bottom: 1px solid var(--border); }
+    .pin-card { background: var(--bg3); border: 1px solid var(--border); border-radius: 12px; padding: 13px; margin-bottom: 8px; position: relative; }
+    .pin-author { font-size: 11px; font-weight: 600; margin-bottom: 5px; }
+    .pin-text { font-size: 13px; color: var(--text); line-height: 1.45; word-break: break-word; }
+    .pin-time { font-size: 10px; color: var(--text3); margin-top: 6px; }
+    .pin-del { position: absolute; top: 10px; right: 10px; background: none; border: none; cursor: pointer; color: var(--text3); font-size: 14px; padding: 2px 5px; }
+    .pin-del:hover { color: var(--danger); }
+    .pin-screen { position: fixed; inset: 0; background: var(--bg); z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 32px; overflow: hidden; touch-action: none; }
+    .pin-logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 28px; color: var(--accent); margin-bottom: 8px; }
+    .pin-subtitle { font-size: 13px; color: var(--text2); margin-bottom: 48px; }
+    .pin-setup-hint { font-size: 14px; color: var(--text2); margin-bottom: 32px; text-align: center; }
+    .pin-dots { display: flex; gap: 14px; margin-bottom: 40px; }
+    .pin-dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--border2); transition: all 0.15s; }
+    .pin-dot.filled { background: var(--accent); border-color: var(--accent); }
+    .pin-dot.error { background: var(--danger); border-color: var(--danger); animation: shake 0.3s; }
     @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)} }
-    .pin-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; width:100%; max-width:280px; }
-    .pin-key { background:var(--bg2); border:1px solid var(--border); border-radius:16px; height:68px; display:flex; align-items:center; justify-content:center; font-family:'Syne',sans-serif; font-size:22px; font-weight:700; cursor:pointer; transition:all 0.1s; user-select:none; -webkit-tap-highlight-color:transparent; }
-    .pin-key:active { background:var(--bg3); transform:scale(0.94); border-color:var(--accent); }
-    .pin-key.del { font-size:18px; color:var(--text2); }
-    .pin-key.empty { background:transparent; border-color:transparent; cursor:default; }
-    .pin-error-msg { font-size:13px; color:var(--danger); margin-bottom:16px; height:18px; }
-    .pin-setup-label { font-size:14px; color:var(--text2); margin-bottom:32px; text-align:center; line-height:1.5; }
-
-    /* Pinboard */
-    .pin-card { background:var(--bg3); border:1px solid var(--border); border-radius:12px; padding:13px; margin-bottom:8px; position:relative; transition: border-color 0.15s; }
-    .pin-card:hover { border-color:var(--border2); }
-    .pin-author { font-size:11px; font-weight:600; margin-bottom:5px; }
-    .pin-text { font-size:13px; color:var(--text); line-height:1.45; word-break:break-word; }
-    .pin-time { font-size:10px; color:var(--text3); margin-top:6px; }
-    .pin-del { position:absolute; top:10px; right:10px; background:none; border:none; cursor:pointer; color:var(--text3); font-size:14px; padding:2px 5px; border-radius:5px; transition:color 0.1s; }
-    .pin-del:hover { color:var(--danger); }
-    .pin-input-row { display:flex; gap:8px; align-items:flex-end; margin-top:10px; }
-
-    /* Sync indicator */
-    .sync-dot { width:7px; height:7px; border-radius:50%; background:var(--success); flex-shrink:0; }
-    .sync-dot.syncing { background:var(--accent); animation:pulse 1s infinite; }
+    .pin-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; width: 100%; max-width: 280px; }
+    .pin-key { background: var(--bg2); border: 1px solid var(--border); border-radius: 16px; height: 68px; display: flex; align-items: center; justify-content: center; font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 700; cursor: pointer; transition: all 0.1s; user-select: none; -webkit-tap-highlight-color: transparent; }
+    .pin-key:active { background: var(--bg3); transform: scale(0.94); border-color: var(--accent); }
+    .pin-key.del { font-size: 18px; color: var(--text2); }
+    .pin-key.empty { background: transparent; border-color: transparent; cursor: default; }
+    .pin-error-msg { font-size: 13px; color: var(--danger); margin-bottom: 16px; height: 18px; text-align: center; }
+    .sync-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--success); flex-shrink: 0; }
+    .sync-dot.syncing { background: var(--accent); animation: pulse 1s infinite; }
     @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
-    /* Loading screen */
-    .loading-screen { display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; gap:16px; }
-    .loading-spinner { width:36px; height:36px; border:3px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin 0.8s linear infinite; }
-    @keyframes spin { to{transform:rotate(360deg)} }
-  </style>
+    .loading-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; gap: 16px; }
+    .loading-spinner { width: 36px; height: 36px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .score-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 6px; }
+    .score-badge.debt { background: rgba(245,158,11,0.12); color: var(--accent); }
+    .score-badge.credit { background: rgba(34,197,94,0.12); color: var(--success); }
+    .empty { text-align: center; padding: 50px 20px; color: var(--text2); }
+    .empty-icon { font-size: 44px; margin-bottom: 12px; }
+    .empty-text { font-size: 14px; }
+    .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .flex { display: flex; } .items-center { align-items: center; } .justify-between { justify-content: space-between; }
+    .gap-2 { gap: 8px; } .flex-1 { flex: 1; min-width: 0; } .mt-3 { margin-top: 14px; }
+</style>
 </head>
 <body>
 <div id="root"></div>
 <script>
-  const firebaseConfig = {
+  firebase.initializeApp({
     apiKey: "AIzaSyDuj7xp5YSu_JDPIOlPhkClVsH3zM_T5Xs",
     authDomain: "wg-eifelwall.firebaseapp.com",
     databaseURL: "https://wg-eifelwall-default-rtdb.europe-west1.firebasedatabase.app",
     projectId: "wg-eifelwall",
     storageBucket: "wg-eifelwall.firebasestorage.app",
     messagingSenderId: "752381232126",
-    appId: "1:752381232126:web:bf1a0bae9004fbdb41f6af",
-    measurementId: "G-DDMEXMYCBG"
-  };
-  firebase.initializeApp(firebaseConfig);
+    appId: "1:752381232126:web:bf1a0bae9004fbdb41f6af"
+  });
   const db = firebase.database();
 </script>
-<script type="text/babel">
-const { useState, useEffect, useMemo, useRef } = React;
+<script type="text/babel">const { useState, useEffect, useMemo, useRef, useCallback } = React;
 
-/* ═══ UTILITIES ═══ */
-// Parse "YYYY-MM-DD" as LOCAL time (not UTC) to avoid timezone day-shift bugs
+/* ══ UTILITIES ══ */
 function parseLocal(d) {
   if (typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d)) {
     const [y,m,day] = d.split('-').map(Number);
@@ -209,21 +156,24 @@ function getMonday(d) {
   const date = parseLocal(d);
   const day = date.getDay();
   const diff = date.getDate() - day + (day === 0 ? -6 : 1);
-  date.setDate(diff); date.setHours(0,0,0,0); return date;
+  date.setDate(diff); date.setHours(0,0,0,0);
+  return date;
 }
 function addDays(d, n) { const r = parseLocal(d); r.setDate(r.getDate()+n); return r; }
 function getWeekKey(d) {
   const m = getMonday(d);
-  const y = m.getFullYear();
-  const mo = String(m.getMonth()+1).padStart(2,'0');
-  const dy = String(m.getDate()).padStart(2,'0');
-  return `${y}-${mo}-${dy}`;
+  return `${m.getFullYear()}-${String(m.getMonth()+1).padStart(2,'0')}-${String(m.getDate()).padStart(2,'0')}`;
 }
-function fmtShort(d) { return new Date(d).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'}); }
-function fmtMonthYear(d) { return new Date(d).toLocaleDateString('de-DE',{month:'long',year:'numeric'}); }
+function getLastSunday(from = new Date()) {
+  const d = new Date(from); d.setHours(0,0,0,0);
+  d.setDate(d.getDate() - d.getDay());
+  return d;
+}
+function fmtShort(d) { return parseLocal(d).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'}); }
+function fmtMonthYear(d) { return parseLocal(d).toLocaleDateString('de-DE',{month:'long',year:'numeric'}); }
 function uid() { return Date.now().toString(36)+Math.random().toString(36).slice(2); }
-function weekNumber(weekKey) {
-  const d = new Date(weekKey);
+function weekNumber(wk) {
+  const d = parseLocal(wk);
   const jan1 = new Date(d.getFullYear(),0,1);
   return Math.ceil(((d-jan1)/86400000+jan1.getDay()+1)/7);
 }
@@ -232,45 +182,8 @@ function isMemberAway(member, weekKey) {
   return (member.absences||[]).some(a => { const f=parseLocal(a.from),t=parseLocal(a.to); return f<=sun&&t>=mon; });
 }
 
-/* ═══ FIREBASE HOOK ═══ */
-function useFirebase(path, defaultValue) {
-  const [value, setValue] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [syncing, setSyncing] = useState(false);
-  const initialized = useRef(false);
-
-  useEffect(() => {
-    const ref = db.ref(path);
-    ref.on('value', snap => {
-      const data = snap.val();
-      if (data !== null) {
-        // Firebase may return arrays as objects with numeric keys — convert back
-        const parsed = Array.isArray(defaultValue) && data !== null && typeof data === 'object' && !Array.isArray(data)
-          ? Object.values(data)
-          : data;
-        setValue(parsed);
-      } else if (!initialized.current) {
-        ref.set(defaultValue);
-        setValue(defaultValue);
-      }
-      initialized.current = true;
-      setLoading(false);
-    });
-    return () => ref.off();
-  }, [path]);
-
-  const set = (updater) => {
-    setSyncing(true);
-    const newVal = typeof updater === 'function' ? updater(value) : updater;
-    db.ref(path).set(newVal).finally(() => setSyncing(false));
-  };
-
-  return [value ?? defaultValue, set, loading, syncing];
-}
-
-/* ═══ CONSTANTS ═══ */
+/* ══ DEFAULTS ══ */
 const COLORS = ['#f59e0b','#ef4444','#3b82f6','#10b981','#8b5cf6','#f97316','#06b6d4','#ec4899'];
-
 const DEFAULT_MEMBERS = [
   {id:'m1',name:'Alex',color:'#f59e0b',iban:'',absences:[]},
   {id:'m2',name:'Lena',color:'#ef4444',iban:'',absences:[]},
@@ -278,198 +191,289 @@ const DEFAULT_MEMBERS = [
   {id:'m4',name:'Mia', color:'#10b981',iban:'',absences:[]},
 ];
 const DEFAULT_JOBS = [
-  {id:'j1',name:'🍳 Küche',  frequency:'weekly',  tasks:['Herd abwischen','Arbeitsflächen reinigen','Spüle putzen','Boden wischen']},
-  {id:'j2',name:'🚿 Bad',    frequency:'weekly',  tasks:['WC reinigen','Waschbecken putzen','Dusche schrubben','Spiegel wischen']},
-  {id:'j3',name:'🚪 Flur',   frequency:'weekly',  tasks:['Saugen','Wischen','Eingang sauber halten']},
-  {id:'j4',name:'🗑️ Müll',   frequency:'weekly',  tasks:['Restmüll','Biomüll','Papiermüll','Gelber Sack']},
+  {id:'j1',name:'🍳 Küche',frequency:'weekly', tasks:['Herd abwischen','Arbeitsflächen reinigen','Spüle putzen','Boden wischen']},
+  {id:'j2',name:'🚿 Bad',  frequency:'weekly', tasks:['WC reinigen','Waschbecken putzen','Dusche schrubben','Spiegel wischen']},
+  {id:'j3',name:'🚪 Flur', frequency:'weekly', tasks:['Saugen','Wischen','Eingang sauber halten']},
+  {id:'j4',name:'🗑️ Müll', frequency:'weekly', tasks:['Restmüll','Biomüll','Papiermüll','Gelber Sack']},
 ];
 
-/* ═══ ROTATION ═══ */
-function isFirstWeekOfMonth(weekKey) {
-  const mon = new Date(weekKey);
-  // The week is "first week of month" if Monday is in days 1-7 of the month
-  return mon.getDate() <= 7;
+/* ══ FIREBASE HOOK ══ */
+function useFirebase(path, defaultValue) {
+  const [value, setValue] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
+  const initialized = useRef(false);
+  useEffect(() => {
+    const ref = db.ref(path);
+    ref.on('value', snap => {
+      const data = snap.val();
+      if (data !== null) {
+        const parsed = Array.isArray(defaultValue) && data && typeof data==='object' && !Array.isArray(data)
+          ? Object.values(data) : data;
+        setValue(parsed);
+      } else if (!initialized.current) {
+        ref.set(defaultValue); setValue(defaultValue);
+      }
+      initialized.current = true; setLoading(false);
+    });
+    return () => ref.off();
+  }, [path]);
+  const set = useCallback((updater) => {
+    setValue(prev => {
+      const newVal = typeof updater==='function' ? updater(prev) : updater;
+      setSyncing(true);
+      db.ref(path).set(newVal).finally(() => setSyncing(false));
+      return newVal;
+    });
+  }, [path]);
+  return [value ?? defaultValue, set, loading, syncing];
 }
 
-function getMonthlyWeekSlot(weekKey) {
-  // Returns which "slot" (0,1,2,...) this week is within the month (0 = first week)
-  const mon = new Date(weekKey);
-  return Math.floor((mon.getDate() - 1) / 7);
+/* ══ JOB SCHEDULING ══ */
+function getActiveJobs(jobs, memberCount, weekKey) {
+  const slot = Math.floor((parseLocal(weekKey).getDate()-1)/7);
+  const weekly = jobs.filter(j => (j.frequency||'weekly')==='weekly');
+  const monthly = jobs.filter(j => j.frequency==='monthly').filter((_,i) => Math.floor(i/memberCount)===slot);
+  return [...weekly, ...monthly];
 }
 
-function getJobsForWeek(jobs, members, weekKey) {
-  if (!jobs.length || !members.length) return [];
-  const memberCount = members.length;
-  const weekSlot = getMonthlyWeekSlot(weekKey);
-
-  // Weekly jobs: always included
-  const weeklyJobs = jobs.filter(j => (j.frequency || 'weekly') === 'weekly');
-
-  // Monthly jobs: distribute across weeks, max memberCount per week
-  const monthlyJobs = jobs.filter(j => j.frequency === 'monthly');
-  const monthlyForThisWeek = monthlyJobs.filter((_, i) => Math.floor(i / memberCount) === weekSlot);
-
-  return [...weeklyJobs, ...monthlyForThisWeek];
-}
-
-function getAssignments(jobs, members, weekKey, ausgleich) {
+// Assign jobs to PRESENT members, sorted by score desc then rotation order
+function getAssignments(jobs, members, weekKey, scores) {
   if (!members.length || !jobs.length) return [];
-  const activeJobs = getJobsForWeek(jobs, members, weekKey);
+  const activeJobs = getActiveJobs(jobs, members.length, weekKey);
   if (!activeJobs.length) return [];
-
-  const aus = ausgleich || {};
+  const sc = scores||{};
   const wn = weekNumber(weekKey);
   const n = members.length;
+  const present = members.filter(m => !isMemberAway(m,weekKey));
+  if (!present.length) return activeJobs.map(job => ({jobId:job.id,memberId:null}));
+  const sorted = [...present].sort((a,b) => {
+    const diff = (sc[b.id]||0)-(sc[a.id]||0);
+    if (diff!==0) return diff;
+    const ia = members.findIndex(m=>m.id===a.id);
+    const ib = members.findIndex(m=>m.id===b.id);
+    return ((ia-wn)%n+n)%n - ((ib-wn)%n+n)%n;
+  });
+  return activeJobs.map((job,i) => ({jobId:job.id, memberId:sorted[i%sorted.length].id}));
+}
 
-  // Only present members get assigned jobs
-  const present = members.filter(m => !isMemberAway(m, weekKey));
-  if (!present.length) return activeJobs.map(job => ({ jobId: job.id, memberId: null }));
+// How many jobs would this member get if everyone was present? (for score calculation)
+function simulateNormalShare(jobs, members, weekKey, memberId) {
+  if (!members.length || !jobs.length) return 0;
+  const activeJobs = getActiveJobs(jobs, members.length, weekKey);
+  if (!activeJobs.length) return 0;
+  const wn = weekNumber(weekKey);
+  const n = members.length;
+  const sorted = [...members].sort((a,b) => {
+    const ia = members.findIndex(m=>m.id===a.id);
+    const ib = members.findIndex(m=>m.id===b.id);
+    return ((ia-wn)%n+n)%n - ((ib-wn)%n+n)%n;
+  });
+  return activeJobs.filter((_,i) => sorted[i%sorted.length].id===memberId).length;
+}
 
-  // Sort present members:
-  // 1. Most positive ausgleich (debt) first — they need to catch up
-  // 2. Most negative ausgleich (credit) last — they earned a break
-  // 3. Tie-break: rotation order based on week number
-  const sorted = [...present].sort((a, b) => {
-    const diff = (aus[b.id] || 0) - (aus[a.id] || 0);
-    if (diff !== 0) return diff;
-    const idxA = members.findIndex(m => m.id === a.id);
-    const idxB = members.findIndex(m => m.id === b.id);
-    return ((idxA - wn) % n + n) % n - ((idxB - wn) % n + n) % n;
+/* ══ SCORE PROCESSING ══
+   Called once on app start. Processes all unprocessed Sundays.
+   Rules:
+   - Absent member: +N where N = jobs they would have gotten (simulation)
+   - Present member who did extra jobs (beyond their normal share): -1 per extra job done
+   - Present member who did only their normal share: no change
+*/
+function processScores(jobs, members, cleaningDone, scores, lastProcessed, setScores, setLastProcessed) {
+  if (!members.length || !jobs.length) return;
+  const lastSunday = getLastSunday();
+  const lastProcessedDate = lastProcessed ? parseLocal(lastProcessed) : null;
+  // Collect Sundays to process (oldest first), max 12 weeks back
+  const toProcess = [];
+  let cur = new Date(lastSunday);
+  const limit = new Date(lastSunday); limit.setDate(limit.getDate()-84);
+  while (true) {
+    if (lastProcessedDate && cur <= lastProcessedDate) break;
+    if (cur < limit) break;
+    toProcess.unshift(new Date(cur));
+    cur.setDate(cur.getDate()-7);
+    if (!lastProcessedDate && toProcess.length>=12) break;
+  }
+  if (!toProcess.length) return;
+
+  let newScores = {...(scores||{})};
+
+  toProcess.forEach(sunday => {
+    // Week that ended on this Sunday
+    const weekKey = getWeekKey(addDays(sunday,-6));
+    const done = (cleaningDone||{})[weekKey]||{};
+    const activeJobs = getActiveJobs(jobs, members.length, weekKey);
+    if (!activeJobs.length) return;
+    const realAssignments = getAssignments(jobs, members, weekKey, newScores);
+
+    members.forEach(member => {
+      if (isMemberAway(member, weekKey)) {
+        // How many jobs would they have gotten?
+        const wouldHave = simulateNormalShare(jobs, members, weekKey, member.id);
+        newScores[member.id] = (newScores[member.id]||0) + wouldHave;
+      } else {
+        // How many were assigned to them, and how many did they do?
+        const myJobs = realAssignments.filter(a => a.memberId===member.id);
+        const myDone = myJobs.filter(a => done[a.jobId]).length;
+        // Their normal share (if everyone present)
+        const normalShare = simulateNormalShare(jobs, members, weekKey, member.id);
+        // Extra = assigned more than normal (because others absent), and actually done
+        const extraDone = Math.max(0, myDone - normalShare);
+        if (extraDone > 0) newScores[member.id] = (newScores[member.id]||0) - extraDone;
+      }
+    });
   });
 
-  return activeJobs.map((job, i) => ({
-    jobId: job.id,
-    memberId: sorted[i % sorted.length].id
-  }));
+  const d = lastSunday;
+  const newLP = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  setScores(newScores);
+  setLastProcessed(newLP);
 }
 
-/* ═══ SHARED COMPONENTS ═══ */
-function Avatar({member, size=36}) {
-  return <div className="avatar" style={{width:size,height:size,background:member.color,fontSize:size*0.38}}>
-    {member.name.slice(0,1).toUpperCase()}
-  </div>;
+/* ══ SHARED COMPONENTS ══ */
+function Avatar({member,size=36}) {
+  return <div className="avatar" style={{width:size,height:size,background:member.color,fontSize:size*0.38}}>{member.name.slice(0,1).toUpperCase()}</div>;
 }
-
-function CheckBox({checked, onChange, color='var(--success)'}) {
-  return <div className={`check-box ${checked?'checked':''}`} style={checked?{background:color}:{}} onClick={onChange}>
-    {checked && <span className="check-tick">✓</span>}
-  </div>;
+function CheckBox({checked,onChange,color='var(--success)'}) {
+  return <div className={`check-box ${checked?'checked':''}`} style={checked?{background:color}:{}} onClick={onChange}>{checked&&<span className="check-tick">✓</span>}</div>;
 }
-
-function Modal({title, onClose, children}) {
-  useEffect(() => {
-    const h = e => { if(e.key==='Escape') onClose(); };
-    document.addEventListener('keydown',h);
-    return ()=>document.removeEventListener('keydown',h);
-  },[onClose]);
+function Modal({title,onClose,children}) {
+  useEffect(()=>{const h=e=>{if(e.key==='Escape')onClose();};document.addEventListener('keydown',h);return()=>document.removeEventListener('keydown',h);},[onClose]);
   return <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
     <div className="modal">
       <div className="flex items-center justify-between" style={{marginBottom:20}}>
-        <div className="modal-title" style={{margin:0}}>{title}</div>
+        <div className="modal-title">{title}</div>
         <button onClick={onClose} style={{background:'none',border:'none',cursor:'pointer',color:'var(--text2)',fontSize:22,lineHeight:1}}>✕</button>
       </div>
       {children}
     </div>
   </div>;
 }
+function ColorDropdown({value,takenColors,onChange}) {
+  const [open,setOpen] = useState(false);
+  const ref = useRef(null);
+  useEffect(()=>{const h=e=>{if(ref.current&&!ref.current.contains(e.target))setOpen(false);};document.addEventListener('mousedown',h);return()=>document.removeEventListener('mousedown',h);},[]);
+  return <div style={{position:'relative'}} ref={ref}>
+    <div className="color-dropdown-btn" onClick={()=>setOpen(o=>!o)}>
+      <div style={{width:22,height:22,borderRadius:'50%',background:value,flexShrink:0,border:'2px solid rgba(255,255,255,0.2)'}}/>
+      <span style={{flex:1}}/>
+      <span style={{color:'var(--text3)',fontSize:12}}>{open?'▲':'▼'}</span>
+    </div>
+    {open&&<div className="color-dropdown-panel">
+      {COLORS.map(c=>{
+        const taken=takenColors.includes(c)&&c!==value;
+        return <div key={c} className={`color-opt ${c===value?'selected':taken?'taken':''}`} style={{background:c}} title={taken?'Bereits vergeben':''} onClick={()=>{if(!taken){onChange(c);setOpen(false);}}}/>;
+      })}
+    </div>}
+  </div>;
+}
+function ScoreBadge({score,onAdjust}) {
+  if (!score || score===0) return null;
+  const isDebt = score>0;
+  return <span className={`score-badge ${isDebt?'debt':'credit'}`}>
+    {isDebt?`↩️ ${score} Ausgleich`:`⭐ ${Math.abs(score)} Guthaben`}
+    <span style={{cursor:'pointer',opacity:0.7,fontSize:12,marginLeft:2}} onClick={e=>{e.stopPropagation();if(confirm(`${isDebt?'Ausgleich':'Guthaben'} manuell um 1 anpassen?`))onAdjust();}}>✕</span>
+  </span>;
+}
 
-/* ═══ PINNWAND ═══ */
-function Pinnwand({members, pins, setPins}) {
-  const [text, setText] = React.useState('');
-  const [author, setAuthor] = React.useState('');
-  const [open, setOpen] = React.useState(false);
-
-  React.useEffect(() => {
-    if (members.length > 0 && !author) setAuthor(members[0].id);
-  }, [members]);
-
-  function addPin() {
-    if (!text.trim() || !author) return;
-    setPins(prev => [{
-      id: uid(),
-      text: text.trim(),
-      authorId: author,
-      createdAt: new Date().toISOString()
-    }, ...(prev||[])]);
-    setText('');
+/* ══ PIN SCREEN ══ */
+function PinScreen({isSetup,existingPin,onUnlock}) {
+  const [input,setInput]=useState('');
+  const [confirmPin,setConfirmPin]=useState('');
+  const [step,setStep]=useState('enter');
+  const [error,setError]=useState('');
+  const [shake,setShake]=useState(false);
+  const PIN_LEN=4;
+  function triggerError(msg){setError(msg);setShake(true);setTimeout(()=>{setShake(false);setInput('');},600);}
+  function handleKey(k){
+    if(k==='del'){setInput(p=>p.slice(0,-1));setError('');return;}
+    const next=input+k;
+    if(next.length>PIN_LEN)return;
+    setInput(next);
+    if(next.length===PIN_LEN){
+      setTimeout(()=>{
+        if(isSetup){
+          if(step==='enter'){setConfirmPin(next);setInput('');setStep('confirm');}
+          else if(next===confirmPin){onUnlock(next);}
+          else{triggerError('PINs stimmen nicht überein');setStep('enter');setConfirmPin('');}
+        } else {
+          if(next===existingPin)onUnlock();
+          else triggerError('Falscher PIN');
+        }
+      },100);
+    }
   }
+  const keys=['1','2','3','4','5','6','7','8','9','empty','0','del'];
+  return <div className="pin-screen">
+    <div className="pin-logo">🏠 WG Eifelwall</div>
+    <div className="pin-subtitle">{isSetup?'PIN einrichten':'PIN eingeben'}</div>
+    {isSetup&&<div className="pin-setup-hint">{step==='enter'?'4-stelligen PIN für die WG festlegen.':'PIN zur Bestätigung wiederholen.'}</div>}
+    <div className="pin-dots">{Array.from({length:PIN_LEN}).map((_,i)=><div key={i} className={`pin-dot ${i<input.length?(shake?'error':'filled'):''}`}/>)}</div>
+    <div className="pin-error-msg">{error}</div>
+    <div className="pin-grid">{keys.map((k,i)=><div key={i} className={`pin-key ${k==='del'?'del':''} ${k==='empty'?'empty':''}`} onClick={()=>k!=='empty'&&handleKey(k)}>{k==='del'?'⌫':k==='empty'?'':k}</div>)}</div>
+  </div>;
+}
 
-  function delPin(id) {
-    setPins(prev => prev.filter(p => p.id !== id));
+/* ══ PINNWAND ══ */
+function Pinnwand({members,pins,setPins}) {
+  const [text,setText]=useState('');
+  const [author,setAuthor]=useState('');
+  const [open,setOpen]=useState(false);
+  useEffect(()=>{if(members.length&&!author)setAuthor(members[0].id);},[members]);
+  function addPin(){
+    if(!text.trim()||!author)return;
+    setPins(prev=>[{id:uid(),text:text.trim(),authorId:author,createdAt:new Date().toISOString()},...(prev||[])]);
+    setText('');setOpen(false);
   }
-
-  function fmtTime(iso) {
-    const d = new Date(iso);
-    const now = new Date();
-    const diff = Math.floor((now - d) / 60000);
-    if (diff < 1) return 'gerade eben';
-    if (diff < 60) return `vor ${diff} Min`;
-    if (diff < 1440) return `vor ${Math.floor(diff/60)} Std`;
-    return d.toLocaleDateString('de-DE', {day:'2-digit', month:'2-digit'});
+  function fmtTime(iso){
+    const diff=Math.floor((Date.now()-new Date(iso))/60000);
+    if(diff<1)return'gerade eben';if(diff<60)return`vor ${diff} Min`;
+    if(diff<1440)return`vor ${Math.floor(diff/60)} Std`;
+    return new Date(iso).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'});
   }
-
-  const sortedPins = [...(pins||[])].sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
-
+  const sorted=[...(pins||[])].sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
   return <div style={{marginTop:4}}>
     <div className="flex items-center justify-between" style={{marginBottom:10}}>
-      <div style={{fontFamily:'Syne', fontWeight:700, fontSize:16, letterSpacing:'-0.3px'}}>📌 Pinnwand</div>
-      <button className="btn btn-ghost btn-xs" onClick={()=>setOpen(o=>!o)}>
-        {open ? 'Abbrechen' : '+ Notiz'}
-      </button>
+      <div style={{fontFamily:'Syne',fontWeight:700,fontSize:16}}>📌 Pinnwand</div>
+      <button className="btn btn-ghost btn-xs" onClick={()=>setOpen(o=>!o)}>{open?'Abbrechen':'+ Notiz'}</button>
     </div>
-
-    {open && <div className="card" style={{marginBottom:10}}>
+    {open&&<div className="card" style={{marginBottom:10}}>
       <div className="form-group" style={{marginBottom:10}}>
         <label>Von wem?</label>
-        <select value={author} onChange={e=>setAuthor(e.target.value)}>
-          {members.map(m=><option key={m.id} value={m.id}>{m.name}</option>)}
-        </select>
+        <select value={author} onChange={e=>setAuthor(e.target.value)}>{members.map(m=><option key={m.id} value={m.id}>{m.name}</option>)}</select>
       </div>
-      <div className="pin-input-row">
-        <textarea
-          rows={2}
-          placeholder="Frage, Vorschlag, Idee …"
-          value={text}
-          onChange={e=>setText(e.target.value)}
-          onKeyDown={e=>{ if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();addPin();} }}
-          style={{flex:1}}
-        />
+      <div style={{display:'flex',gap:8,alignItems:'flex-end'}}>
+        <textarea rows={2} placeholder="Frage, Vorschlag, Idee …" value={text} onChange={e=>setText(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();addPin();}}} style={{flex:1}}/>
         <button className="btn btn-primary btn-sm" onClick={addPin} style={{flexShrink:0}}>📌</button>
       </div>
     </div>}
-
-    {sortedPins.length === 0
-      ? <div style={{textAlign:'center',padding:'24px 0',color:'var(--text3)',fontSize:13}}>Noch keine Notizen</div>
-      : sortedPins.map(pin => {
-          const member = members.find(m=>m.id===pin.authorId);
-          return <div key={pin.id} className="pin-card">
-            {member && <div className="pin-author" style={{color:member.color}}>
-              {member.name}
-            </div>}
-            <div className="pin-text">{pin.text}</div>
-            <div className="pin-time">{fmtTime(pin.createdAt)}</div>
-            <button className="pin-del" onClick={()=>delPin(pin.id)}>✕</button>
-          </div>;
-        })
+    {sorted.length===0
+      ?<div style={{textAlign:'center',padding:'24px 0',color:'var(--text3)',fontSize:13}}>Noch keine Notizen</div>
+      :sorted.map(pin=>{
+        const member=members.find(m=>m.id===pin.authorId);
+        return <div key={pin.id} className="pin-card">
+          {member&&<div className="pin-author" style={{color:member.color}}>{member.name}</div>}
+          <div className="pin-text">{pin.text}</div>
+          <div className="pin-time">{fmtTime(pin.createdAt)}</div>
+          <button className="pin-del" onClick={()=>setPins(prev=>prev.filter(p=>p.id!==pin.id))}>✕</button>
+        </div>;
+      })
     }
   </div>;
 }
 
-/* ═══ DASHBOARD ═══ */
-function Dashboard({members,jobs,cleaningDone,purchases,pins,setPins,ausgleich,setActiveTab}) {
-  const today = new Date();
-  const weekKey = getWeekKey(today);
-  const monday = new Date(weekKey), sunday = addDays(monday,6);
-  const assignments = useMemo(()=>getAssignments(jobs,members,weekKey,ausgleich),[jobs,members,weekKey,ausgleich]);
-  const awayNow = members.filter(m=>isMemberAway(m,weekKey));
-  const openP = purchases.filter(p=>!p.done);
-  const weekDone = cleaningDone[weekKey]||{};
-  const doneCount = Object.values(weekDone).filter(Boolean).length;
-  const total = assignments.length;
-  const allDone = total>0&&doneCount===total;
-  const hour = today.getHours();
-  const greet = hour<12?'Guten Morgen':hour<18?'Guten Tag':'Guten Abend';
-
+/* ══ DASHBOARD ══ */
+function Dashboard({members,jobs,cleaningDone,purchases,pins,setPins,scores,setActiveTab}) {
+  const weekKey=getWeekKey(new Date());
+  const monday=parseLocal(weekKey), sunday=addDays(monday,6);
+  const assignments=useMemo(()=>getAssignments(jobs,members,weekKey,scores),[jobs,members,weekKey,scores]);
+  const awayNow=members.filter(m=>isMemberAway(m,weekKey));
+  const openP=(purchases||[]).filter(p=>!p.done);
+  const weekDone=(cleaningDone||{})[weekKey]||{};
+  const doneCount=assignments.filter(a=>weekDone[a.jobId]).length;
+  const total=assignments.length;
+  const hour=new Date().getHours();
+  const greet=hour<12?'Guten Morgen':hour<18?'Guten Tag':'Guten Abend';
   return <div>
     <div style={{marginBottom:18}}>
       <div style={{fontSize:13,color:'var(--text2)',marginBottom:3}}>{greet} 👋</div>
@@ -477,7 +481,7 @@ function Dashboard({members,jobs,cleaningDone,purchases,pins,setPins,ausgleich,s
     </div>
     <div className="stats-grid">
       <div className="stat-card" onClick={()=>setActiveTab('putzplan')}>
-        <div className="stat-num" style={{color:allDone?'var(--success)':'var(--accent)'}}>{doneCount}/{total}</div>
+        <div className="stat-num" style={{color:total>0&&doneCount===total?'var(--success)':'var(--accent)'}}>{doneCount}/{total}</div>
         <div className="stat-label">Putzjobs</div>
       </div>
       <div className="stat-card" onClick={()=>setActiveTab('einkaufe')}>
@@ -499,12 +503,11 @@ function Dashboard({members,jobs,cleaningDone,purchases,pins,setPins,ausgleich,s
         const job=jobs.find(j=>j.id===a.jobId);
         const member=a.memberId?members.find(m=>m.id===a.memberId):null;
         const done=weekDone[a.jobId];
-        if(!job||!member) return null;
+        if(!job)return null;
+        if(!member)return <div key={a.jobId} className="row-item"><div style={{flex:1,fontSize:14}}>{job.name}</div><span style={{fontSize:12,color:'var(--accent)'}}>niemand verfügbar</span></div>;
         return <div key={a.jobId} className="row-item">
           <div style={{width:4,height:36,borderRadius:4,background:done?'var(--success)':member.color,flexShrink:0}}/>
-          <div style={{flex:1}}>
-            <div style={{fontSize:14,fontWeight:500,textDecoration:done?'line-through':'none',color:done?'var(--text2)':'var(--text)'}}>{job.name}</div>
-          </div>
+          <div style={{flex:1}}><div style={{fontSize:14,fontWeight:500,textDecoration:done?'line-through':'none',color:done?'var(--text2)':'var(--text)'}}>{job.name}</div></div>
           <div className="flex items-center gap-2">
             {done&&<span style={{color:'var(--success)',fontSize:13}}>erledigt</span>}
             <Avatar member={member} size={26}/>
@@ -519,91 +522,46 @@ function Dashboard({members,jobs,cleaningDone,purchases,pins,setPins,ausgleich,s
         return <div key={p.id} className="row-item">
           <div style={{flex:1}}>
             <div style={{fontSize:14}}>{p.description}</div>
-            {mem&&<div style={{fontSize:12,color:'var(--text2)',marginTop:2}}>
-              <span style={{color:mem.color}}>{mem.name}</span> hat bezahlt
-              {mem.iban?<span> · {mem.iban}</span>:null}
-            </div>}
+            {mem&&<div style={{fontSize:12,color:'var(--text2)',marginTop:2}}><span style={{color:mem.color}}>{mem.name}</span> hat bezahlt{mem.iban?<span> · {mem.iban}</span>:null}</div>}
           </div>
           <div style={{fontFamily:'Syne',fontWeight:700,fontSize:15,color:'var(--accent)'}}>{p.amount}€</div>
         </div>;
       })}
       {openP.length>4&&<div style={{fontSize:12,color:'var(--text2)',marginTop:8}}>+{openP.length-4} weitere →</div>}
     </div>}
-    {total>0&&allDone&&openP.length===0&&awayNow.length===0&&<div style={{textAlign:'center',padding:'30px 20px'}}>
+    {total>0&&doneCount===total&&openP.length===0&&awayNow.length===0&&<div style={{textAlign:'center',padding:'30px 20px'}}>
       <div style={{fontSize:48}}>🎉</div>
       <div style={{fontFamily:'Syne',fontWeight:700,fontSize:18,marginTop:10}}>Alles erledigt!</div>
       <div style={{color:'var(--text2)',fontSize:13,marginTop:4}}>Die WG ist tip-top diese Woche.</div>
     </div>}
-
-    <Pinnwand members={members} pins={pins} setPins={setPins} />
+    <Pinnwand members={members} pins={pins} setPins={setPins}/>
   </div>;
 }
 
-/* ═══ PUTZPLAN ═══ */
-function Putzplan({members,jobs,cleaningDone,setCleaningDone,ausgleich,setAusgleich,processedWks,setProcessedWks}) {
-  const [view,setView] = useState('woche');
-  const [weekKey,setWeekKey] = useState(getWeekKey(new Date()));
-  const monday = new Date(weekKey), sunday = addDays(monday,6);
-  const currentWeekKey = getWeekKey(new Date());
-  const isCurrentWeek = weekKey===currentWeekKey;
-  const assignments = useMemo(()=>getAssignments(jobs,members,weekKey,ausgleich),[jobs,members,weekKey,ausgleich]);
-  const weekDone = cleaningDone[weekKey]||{};
-
-  // Week-end processing: calculate ausgleich for previous week
-  useEffect(() => {
-    if (!members.length || !jobs.length) return;
-    const pastKey = getWeekKey(addDays(new Date(), -7));
-    if ((processedWks||{})[pastKey]) return;
-
-    const pastPresent = members.filter(m => !isMemberAway(m, pastKey));
-    const pastAbsent  = members.filter(m =>  isMemberAway(m, pastKey));
-    const pastAssign  = getAssignments(jobs, members, pastKey, ausgleich);
-    const pastDone    = cleaningDone[pastKey] || {};
-    if (!pastAssign.length) { setProcessedWks(prev=>({...(prev||{}),[pastKey]:true})); return; }
-
-    const newAus = {...(ausgleich||{})};
-
-    // Absent members owe +1 per missed week
-    pastAbsent.forEach(m => { newAus[m.id] = (newAus[m.id] || 0) + 1; });
-
-    // Present members who got more jobs than normal and completed them earn -1 credit per extra job done
-    // Base = what each person would normally get in a full-attendance week
-    const basePerPerson = pastAssign.length / members.length; // e.g. 4 jobs / 4 members = 1
-    const assignedCount = {};
-    pastAssign.forEach(a => { if (a.memberId) assignedCount[a.memberId] = (assignedCount[a.memberId]||0)+1; });
-
-    pastPresent.forEach(m => {
-      const assigned = assignedCount[m.id] || 0;
-      const extraAssigned = Math.max(0, assigned - basePerPerson);
-      if (extraAssigned > 0) {
-        const myJobs = pastAssign.filter(a => a.memberId === m.id);
-        const doneCount = myJobs.filter(a => pastDone[a.jobId]).length;
-        // Credit only for extra jobs actually completed
-        const extraDone = Math.min(extraAssigned, Math.max(0, doneCount - Math.floor(basePerPerson)));
-        if (extraDone > 0) newAus[m.id] = (newAus[m.id] || 0) - extraDone;
-      }
-    });
-
-    setAusgleich(newAus);
-    setProcessedWks(prev => ({...(prev||{}), [pastKey]: true}));
-  }, [weekKey]);
-
-  function toggle(jobId) {
-    setCleaningDone(prev=>({...prev,[weekKey]:{...(prev[weekKey]||{}),[jobId]:!(prev[weekKey]||{})[jobId]}}));
-  }
-
-  const monthWeeks = useMemo(()=>{
-    const d=new Date(weekKey), y=d.getFullYear(), mo=d.getMonth();
-    const first=new Date(y,mo,1), last=new Date(y,mo+1,0);
-    const weeks=[]; let cur=new Date(getMonday(first));
-    while(cur<=last){weeks.push(cur.toISOString().split('T')[0]);cur=addDays(cur,7);}
+/* ══ PUTZPLAN ══ */
+function Putzplan({members,jobs,cleaningDone,setCleaningDone,scores}) {
+  const [view,setView]=useState('woche');
+  const [weekKey,setWeekKey]=useState(getWeekKey(new Date()));
+  const currentWeekKey=getWeekKey(new Date());
+  const isCurrentWeek=weekKey===currentWeekKey;
+  const monday=parseLocal(weekKey), sunday=addDays(monday,6);
+  const assignments=useMemo(()=>getAssignments(jobs,members,weekKey,scores),[jobs,members,weekKey,scores]);
+  const weekDone=(cleaningDone||{})[weekKey]||{};
+  const awayThisWeek=members.filter(m=>isMemberAway(m,weekKey));
+  function toggle(jobId){setCleaningDone(prev=>({...prev,[weekKey]:{...(prev[weekKey]||{}),[jobId]:!(prev[weekKey]||{})[jobId]}}));}
+  function navWeek(n){setWeekKey(getWeekKey(addDays(parseLocal(weekKey),n*7)));}
+  function navMonth(n){const d=parseLocal(weekKey);d.setMonth(d.getMonth()+n);setWeekKey(getWeekKey(d));}
+  const monthWeeks=useMemo(()=>{
+    const d=parseLocal(weekKey),last=new Date(d.getFullYear(),d.getMonth()+1,0);
+    const weeks=[];let cur=getMonday(new Date(d.getFullYear(),d.getMonth(),1));
+    while(cur<=last){weeks.push(getWeekKey(cur));cur=addDays(cur,7);}
     return weeks;
   },[weekKey]);
 
   return <div>
     <div className="section-header">
       <h2 className="section-title">Putzplan</h2>
-      {!isCurrentWeek&&<button className="btn btn-ghost btn-sm" onClick={()=>setWeekKey(getWeekKey(new Date()))}>Heute</button>}
+      {!isCurrentWeek&&<button className="btn btn-ghost btn-sm" onClick={()=>setWeekKey(currentWeekKey)}>Heute</button>}
     </div>
     <div className="tab-switch">
       <button className={`tab-switch-btn ${view==='woche'?'active':''}`} onClick={()=>setView('woche')}>Woche</button>
@@ -611,13 +569,17 @@ function Putzplan({members,jobs,cleaningDone,setCleaningDone,ausgleich,setAusgle
     </div>
     {view==='woche'?<>
       <div className="week-nav">
-        <button className="icon-btn" onClick={()=>setWeekKey(getWeekKey(addDays(new Date(weekKey),-7)))}>←</button>
-        <div>
+        <button className="icon-btn" onClick={()=>navWeek(-1)}>←</button>
+        <div style={{textAlign:'center'}}>
           <div className="week-label">{fmtShort(monday)} – {fmtShort(sunday)}</div>
-          {isCurrentWeek&&<div style={{fontSize:10,color:'var(--accent)',textAlign:'center',marginTop:1}}>Diese Woche</div>}
+          {isCurrentWeek&&<div style={{fontSize:10,color:'var(--accent)',marginTop:1}}>Diese Woche</div>}
         </div>
-        <button className="icon-btn" onClick={()=>setWeekKey(getWeekKey(addDays(new Date(weekKey),7)))}>→</button>
+        <button className="icon-btn" onClick={()=>navWeek(1)}>→</button>
       </div>
+      {awayThisWeek.length>0&&<div style={{marginBottom:12,padding:'8px 12px',background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:10,display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
+        <span style={{fontSize:12,color:'var(--text2)'}}>✈️ Weg:</span>
+        {awayThisWeek.map(m=><span key={m.id} style={{fontSize:12,color:m.color,fontWeight:500}}>{m.name}</span>)}
+      </div>}
       {jobs.length===0?<div className="empty"><div className="empty-icon">💼</div><div className="empty-text">Lege zuerst Jobs an.</div></div>
       :members.length===0?<div className="empty"><div className="empty-icon">👥</div><div className="empty-text">Füge Bewohner hinzu.</div></div>
       :<div className="card" style={{padding:0,overflow:'hidden'}}>
@@ -625,35 +587,38 @@ function Putzplan({members,jobs,cleaningDone,setCleaningDone,ausgleich,setAusgle
           const job=jobs.find(j=>j.id===a.jobId);
           const member=a.memberId?members.find(m=>m.id===a.memberId):null;
           const done=weekDone[a.jobId]||false;
-          if(!job) return null;
-          if(!member) return <div key={a.jobId} style={{padding:'15px 16px',borderBottom:i<assignments.length-1?'1px solid var(--border)':'none',fontSize:14,color:'var(--text2)'}}>{job.name} — <span style={{color:'var(--accent)'}}>niemand verfügbar</span></div>;
+          if(!job)return null;
+          if(!member)return <div key={a.jobId} style={{padding:'15px 16px',borderBottom:i<assignments.length-1?'1px solid var(--border)':'none',fontSize:14,color:'var(--text2)'}}>{job.name} — <span style={{color:'var(--accent)'}}>niemand verfügbar</span></div>;
+          const normalShare=simulateNormalShare(jobs,members,weekKey,member.id);
+          const assignedCount=assignments.filter(x=>x.memberId===member.id).length;
+          const isExtra=assignedCount>normalShare&&assignments.filter(x=>x.memberId===member.id).findIndex(x=>x.jobId===a.jobId)===assignedCount-1;
+          const memberScore=(scores||{})[member.id]||0;
           return <div key={a.jobId} style={{display:'flex',alignItems:'center',gap:14,padding:'15px 16px',borderBottom:i<assignments.length-1?'1px solid var(--border)':'none',background:done?'rgba(34,197,94,0.05)':'transparent',transition:'background 0.2s'}}>
             <CheckBox checked={done} onChange={()=>toggle(a.jobId)} color={member.color}/>
             <div style={{flex:1}}>
               <div style={{fontSize:15,fontWeight:500,textDecoration:done?'line-through':'none',color:done?'var(--text2)':'var(--text)'}}>{job.name}</div>
-              {(job.frequency==='monthly') && <div style={{fontSize:11,color:'var(--accent)',marginTop:1,fontWeight:500}}>monatlich</div>}
-              {(ausgleich||{})[member.id] > 0 && <div style={{fontSize:11,color:'var(--accent)',marginTop:1}}>↩️ Ausgleichs-Job</div>}
-              {(ausgleich||{})[member.id] < 0 && <div style={{fontSize:11,color:'var(--success)',marginTop:1}}>⭐ Extra-Job (Guthaben)</div>}
+              <div style={{display:'flex',gap:5,marginTop:2,flexWrap:'wrap'}}>
+                {job.frequency==='monthly'&&<span style={{fontSize:11,color:'var(--accent)',fontWeight:500}}>monatlich</span>}
+                {isExtra&&memberScore<=0&&<span style={{fontSize:11,color:'var(--success)'}}>⭐ Extra-Job</span>}
+                {memberScore>0&&<span style={{fontSize:11,color:'var(--accent)'}}>↩️ Ausgleichs-Job</span>}
+              </div>
             </div>
-            <div style={{display:'flex',alignItems:'center',gap:6}}>
-              <Avatar member={member} size={30}/>
-            </div>
+            <Avatar member={member} size={30}/>
           </div>;
         })}
       </div>}
-
     </>:<>
       <div className="week-nav">
-        <button className="icon-btn" onClick={()=>{const d=new Date(weekKey);d.setMonth(d.getMonth()-1);setWeekKey(getWeekKey(d));}}>←</button>
+        <button className="icon-btn" onClick={()=>navMonth(-1)}>←</button>
         <div className="week-label">{fmtMonthYear(weekKey)}</div>
-        <button className="icon-btn" onClick={()=>{const d=new Date(weekKey);d.setMonth(d.getMonth()+1);setWeekKey(getWeekKey(d));}}>→</button>
+        <button className="icon-btn" onClick={()=>navMonth(1)}>→</button>
       </div>
       <div className="card" style={{padding:'4px 16px'}}>
         {monthWeeks.map(wk=>{
-          const wkMon=new Date(wk), wkSun=addDays(wkMon,6);
-          const wkAssign=getAssignments(jobs,members,wk,ausgleich);
-          const wkDone=cleaningDone[wk]||{};
-          const dc=Object.values(wkDone).filter(Boolean).length;
+          const wkMon=parseLocal(wk),wkSun=addDays(wkMon,6);
+          const wkAssign=getAssignments(jobs,members,wk,scores);
+          const wkDone=(cleaningDone||{})[wk]||{};
+          const dc=wkAssign.filter(a=>wkDone[a.jobId]).length;
           const isCur=wk===currentWeekKey;
           return <div key={wk} className="month-week">
             <div className="flex items-center justify-between" style={{marginBottom:7}}>
@@ -665,9 +630,9 @@ function Putzplan({members,jobs,cleaningDone,setCleaningDone,ausgleich,setAusgle
             </div>
             <div style={{display:'flex',flexWrap:'wrap',gap:5}}>
               {wkAssign.map(a=>{
-                const job=jobs.find(j=>j.id===a.jobId), member=members.find(m=>m.id===a.memberId);
-                if(!job||!member) return null;
-                const done=(cleaningDone[wk]||{})[a.jobId];
+                const job=jobs.find(j=>j.id===a.jobId),member=members.find(m=>m.id===a.memberId);
+                if(!job||!member)return null;
+                const done=wkDone[a.jobId];
                 return <div key={a.jobId} style={{display:'flex',alignItems:'center',gap:5,background:done?'rgba(34,197,94,0.1)':'var(--bg3)',border:`1px solid ${done?'rgba(34,197,94,0.25)':'var(--border)'}`,borderRadius:7,padding:'4px 9px'}}>
                   <div style={{width:5,height:5,borderRadius:'50%',background:member.color,flexShrink:0}}/>
                   <span style={{fontSize:11,color:done?'var(--text2)':'var(--text)'}}>{job.name.replace(/^\S+\s*/,'')}</span>
@@ -682,50 +647,42 @@ function Putzplan({members,jobs,cleaningDone,setCleaningDone,ausgleich,setAusgle
   </div>;
 }
 
-/* ═══ WG-EINKÄUFE ═══ */
+/* ══ WG-EINKÄUFE ══ */
 function WGEinkaufe({members,purchases,setPurchases}) {
-  const [showAdd,setShowAdd] = useState(false);
-  const [desc,setDesc] = useState('');
-  const [amount,setAmount] = useState('');
-  const [paidBy,setPaidBy] = useState('');
-  const open = purchases.filter(p=>!p.done);
-  const done = purchases.filter(p=>p.done);
-
-  function add() {
-    if(!desc.trim()||!amount||!paidBy) return;
+  const [showAdd,setShowAdd]=useState(false);
+  const [desc,setDesc]=useState('');
+  const [amount,setAmount]=useState('');
+  const [paidBy,setPaidBy]=useState('');
+  const open=(purchases||[]).filter(p=>!p.done);
+  const done=(purchases||[]).filter(p=>p.done);
+  function add(){
+    if(!desc.trim()||!amount||!paidBy)return;
     const val=parseFloat(amount.replace(',','.'));
-    if(isNaN(val)||val<=0) return;
-    setPurchases(prev=>[{id:uid(),description:desc.trim(),amount:val.toFixed(2),paidBy,done:false,createdAt:new Date().toISOString()},...prev]);
-    setDesc(''); setAmount(''); setShowAdd(false);
+    if(isNaN(val)||val<=0)return;
+    setPurchases(prev=>[{id:uid(),description:desc.trim(),amount:val.toFixed(2),paidBy,done:false,createdAt:new Date().toISOString()},...(prev||[])]);
+    setDesc('');setAmount('');setShowAdd(false);
   }
-
-  function toggleDone(id) { setPurchases(prev=>prev.map(p=>p.id===id?{...p,done:!p.done}:p)); }
-  function del(id) { if(confirm('Eintrag löschen?')) setPurchases(prev=>prev.filter(p=>p.id!==id)); }
-
-  const PRow = ({p,isDone}) => {
+  function toggleDone(id){setPurchases(prev=>prev.map(p=>p.id===id?{...p,done:!p.done}:p));}
+  function del(id){if(confirm('Eintrag löschen?'))setPurchases(prev=>prev.filter(p=>p.id!==id));}
+  const PRow=({p,isDone})=>{
     const mem=members.find(m=>m.id===p.paidBy);
     return <div style={{display:'flex',alignItems:'center',gap:12,padding:'13px 16px',opacity:isDone?0.55:1}}>
       <CheckBox checked={isDone} onChange={()=>toggleDone(p.id)} color="var(--success)"/>
       <div style={{flex:1,minWidth:0}}>
         <div style={{fontSize:14,fontWeight:500,textDecoration:isDone?'line-through':'none',color:isDone?'var(--text2)':'var(--text)'}} className="truncate">{p.description}</div>
-        {mem&&<div style={{fontSize:12,color:'var(--text2)',marginTop:2}}>
-          <span style={{color:mem.color}}>{mem.name}</span> hat bezahlt
-          {mem.iban&&<span> · <span style={{userSelect:'all'}}>{mem.iban}</span></span>}
-        </div>}
+        {mem&&<div style={{fontSize:12,color:'var(--text2)',marginTop:2}}><span style={{color:mem.color}}>{mem.name}</span> hat bezahlt{mem.iban&&<span> · <span style={{userSelect:'all'}}>{mem.iban}</span></span>}</div>}
       </div>
       <div style={{fontFamily:'Syne',fontWeight:700,fontSize:15,color:isDone?'var(--text2)':'var(--accent)',flexShrink:0}}>{p.amount}€</div>
       <button onClick={()=>del(p.id)} style={{background:'none',border:'none',cursor:'pointer',color:'var(--text3)',fontSize:16,padding:'4px',flexShrink:0}}>✕</button>
     </div>;
   };
-
   return <div>
     <div className="section-header">
       <h2 className="section-title">WG-Einkäufe</h2>
       <button className="btn btn-primary btn-sm" onClick={()=>{setPaidBy(members[0]?.id||'');setShowAdd(true);}}>+ Eintrag</button>
     </div>
-    {purchases.length===0?<div className="empty">
-      <div className="empty-icon">💸</div>
-      <div className="empty-text">Noch keine Einträge</div>
+    {!purchases?.length?<div className="empty">
+      <div className="empty-icon">💸</div><div className="empty-text">Noch keine Einträge</div>
       <button className="btn btn-primary" style={{marginTop:16}} onClick={()=>{setPaidBy(members[0]?.id||'');setShowAdd(true);}}>Ersten Eintrag erstellen</button>
     </div>:<>
       {open.length>0&&<div className="card" style={{padding:0,overflow:'hidden',marginBottom:14}}>
@@ -738,20 +695,9 @@ function WGEinkaufe({members,purchases,setPurchases}) {
       </div>}
     </>}
     {showAdd&&<Modal title="💸 Neuer Eintrag" onClose={()=>setShowAdd(false)}>
-      <div className="form-group">
-        <label>Beschreibung</label>
-        <input autoFocus placeholder="z.B. Toilettenpapier, Spülmittel …" value={desc} onChange={e=>setDesc(e.target.value)} onKeyDown={e=>e.key==='Enter'&&add()}/>
-      </div>
-      <div className="form-group">
-        <label>Betrag (€)</label>
-        <input type="number" step="0.01" min="0.01" placeholder="0,00" value={amount} onChange={e=>setAmount(e.target.value)}/>
-      </div>
-      <div className="form-group">
-        <label>Wer hat bezahlt?</label>
-        <select value={paidBy} onChange={e=>setPaidBy(e.target.value)}>
-          {members.map(m=><option key={m.id} value={m.id}>{m.name}</option>)}
-        </select>
-      </div>
+      <div className="form-group"><label>Beschreibung</label><input autoFocus placeholder="z.B. Toilettenpapier …" value={desc} onChange={e=>setDesc(e.target.value)} onKeyDown={e=>e.key==='Enter'&&add()}/></div>
+      <div className="form-group"><label>Betrag (€)</label><input type="number" step="0.01" min="0.01" placeholder="0,00" value={amount} onChange={e=>setAmount(e.target.value)}/></div>
+      <div className="form-group"><label>Wer hat bezahlt?</label><select value={paidBy} onChange={e=>setPaidBy(e.target.value)}>{members.map(m=><option key={m.id} value={m.id}>{m.name}</option>)}</select></div>
       <div className="flex gap-2 mt-3">
         <button className="btn btn-ghost flex-1" onClick={()=>setShowAdd(false)}>Abbrechen</button>
         <button className="btn btn-primary flex-1" onClick={add}>Eintragen</button>
@@ -760,142 +706,84 @@ function WGEinkaufe({members,purchases,setPurchases}) {
   </div>;
 }
 
-/* ═══ COLOR DROPDOWN ═══ */
-function ColorDropdown({value, takenColors, onChange}) {
-  const [open, setOpen] = React.useState(false);
-  const ref = React.useRef(null);
-
-  React.useEffect(() => {
-    function handleClick(e) {
-      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
-    }
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, []);
-
-  return (
-    <div style={{position:'relative'}} ref={ref}>
-      <div className="color-dropdown-btn" onClick={()=>setOpen(o=>!o)}>
-        <div style={{width:22,height:22,borderRadius:'50%',background:value,flexShrink:0,border:'2px solid rgba(255,255,255,0.2)'}}/>
-        <span style={{flex:1}}/>
-        <span style={{color:'var(--text3)',fontSize:12}}>{open?'▲':'▼'}</span>
-      </div>
-      {open && <div className="color-dropdown-panel">
-        {COLORS.map(c => {
-          const isTaken = takenColors.includes(c) && c !== value;
-          const isSelected = c === value;
-          return <div
-            key={c}
-            className={`color-opt ${isSelected?'selected':isTaken?'taken':'available'}`}
-            style={{background:c}}
-            title={isTaken?'Bereits vergeben':''}
-            onClick={()=>{ if(!isTaken){onChange(c);setOpen(false);} }}
-          />;
-        })}
-      </div>}
-    </div>
-  );
-}
-
-/* ═══ BEWOHNER ═══ */
-function Bewohner({members,setMembers,ausgleich,setAusgleich}) {
-  const [showAdd,setShowAdd] = useState(false);
-  const [newName,setNewName] = useState('');
-  const [newColor,setNewColor] = useState(COLORS[0]);
-  const [absModalFor,setAbsModalFor] = useState(null);
-  const [absFrom,setAbsFrom] = useState('');
-  const [absTo,setAbsTo] = useState('');
-
-  function add() {
-    if(!newName.trim()) return;
+/* ══ BEWOHNER ══ */
+function Bewohner({members,setMembers,scores,setScores}) {
+  const [showAdd,setShowAdd]=useState(false);
+  const [newName,setNewName]=useState('');
+  const [newColor,setNewColor]=useState(COLORS[0]);
+  const [absModalFor,setAbsModalFor]=useState(null);
+  const [absFrom,setAbsFrom]=useState('');
+  const [absTo,setAbsTo]=useState('');
+  function add(){
+    if(!newName.trim())return;
     const used=members.map(m=>m.color);
     const color=COLORS.find(c=>!used.includes(c))||newColor;
     setMembers(prev=>[...prev,{id:uid(),name:newName.trim(),color,iban:'',absences:[]}]);
-    setNewName(''); setShowAdd(false);
+    setNewName('');setShowAdd(false);
   }
-  function remove(id) { if(confirm('Bewohner wirklich entfernen?')) setMembers(prev=>prev.filter(m=>m.id!==id)); }
-  function update(id,changes) { setMembers(prev=>prev.map(m=>m.id===id?{...m,...changes}:m)); }
-  function addAbsence(memberId) {
-    if(!absFrom||!absTo||absFrom>absTo) return;
+  function remove(id){
+    if(confirm('Bewohner wirklich entfernen?')){
+      setMembers(prev=>prev.filter(m=>m.id!==id));
+      setScores(prev=>{const s={...prev};delete s[id];return s;});
+    }
+  }
+  function update(id,changes){setMembers(prev=>prev.map(m=>m.id===id?{...m,...changes}:m));}
+  function addAbsence(memberId){
+    if(!absFrom||!absTo||absFrom>absTo)return;
     setMembers(prev=>prev.map(m=>m.id===memberId?{...m,absences:[...(m.absences||[]),{id:uid(),from:absFrom,to:absTo}]}:m));
-    setAbsFrom(''); setAbsTo(''); setAbsModalFor(null);
+    setAbsFrom('');setAbsTo('');setAbsModalFor(null);
   }
-  function removeAbsence(memberId,absId) { setMembers(prev=>prev.map(m=>m.id===memberId?{...m,absences:m.absences.filter(a=>a.id!==absId)}:m)); }
-
+  function removeAbsence(memberId,absId){setMembers(prev=>prev.map(m=>m.id===memberId?{...m,absences:m.absences.filter(a=>a.id!==absId)}:m));}
+  function adjustScore(memberId,delta){setScores(prev=>({...prev,[memberId]:(prev[memberId]||0)+delta}));}
   return <div>
     <div className="section-header">
       <h2 className="section-title">Bewohner</h2>
       <button className="btn btn-primary btn-sm" onClick={()=>setShowAdd(true)}>+ Einziehen</button>
     </div>
     {members.length===0&&<div className="empty"><div className="empty-icon">👥</div><div className="empty-text">Noch keine Bewohner</div></div>}
-    {members.map(member=><div key={member.id} className="card">
-      <div className="flex items-center gap-3" style={{marginBottom:14}}>
-        <Avatar member={member} size={48}/>
-        <div style={{flex:1}}>
-          <input value={member.name} onChange={e=>update(member.id,{name:e.target.value})}
-            style={{background:'transparent',border:'none',padding:0,fontSize:17,fontWeight:600,fontFamily:'Syne',color:'var(--text)',borderBottom:'1px solid transparent',borderRadius:0,width:'100%'}}
-            onFocus={e=>e.target.style.borderBottomColor='var(--accent)'}
-            onBlur={e=>e.target.style.borderBottomColor='transparent'}/>
-          <div style={{fontSize:12,color:'var(--text2)',marginTop:2,display:'flex',alignItems:'center',gap:6}}>
-            Bewohner
-            {(ausgleich||{})[member.id] > 0 && (
-              <span style={{display:'inline-flex',alignItems:'center',gap:4,background:'rgba(245,158,11,0.12)',color:'var(--accent)',fontSize:11,fontWeight:600,padding:'2px 8px',borderRadius:6}}>
-                ↩️ {(ausgleich||{})[member.id]} Ausgleich
-                <span
-                  onClick={e=>{e.stopPropagation();if(confirm('Einen Ausgleich manuell abziehen?'))setAusgleich(prev=>({...prev,[member.id]:(prev[member.id]||1)-1}));}}
-                  style={{cursor:'pointer',color:'var(--accent)',opacity:0.7,fontSize:12,marginLeft:2,lineHeight:1}}>✕</span>
-              </span>
-            )}
-            {(ausgleich||{})[member.id] < 0 && (
-              <span style={{display:'inline-flex',alignItems:'center',gap:4,background:'rgba(34,197,94,0.12)',color:'var(--success)',fontSize:11,fontWeight:600,padding:'2px 8px',borderRadius:6}}>
-                ⭐ {Math.abs((ausgleich||{})[member.id])} Guthaben
-                <span
-                  onClick={e=>{e.stopPropagation();if(confirm('Ein Guthaben manuell abziehen?'))setAusgleich(prev=>({...prev,[member.id]:(prev[member.id]||0)+1}));}}
-                  style={{cursor:'pointer',color:'var(--success)',opacity:0.7,fontSize:12,marginLeft:2,lineHeight:1}}>✕</span>
-              </span>
-            )}
+    {members.map(member=>{
+      const score=(scores||{})[member.id]||0;
+      return <div key={member.id} className="card">
+        <div className="flex items-center gap-2" style={{marginBottom:14}}>
+          <Avatar member={member} size={48}/>
+          <div style={{flex:1,minWidth:0}}>
+            <input value={member.name} onChange={e=>update(member.id,{name:e.target.value})}
+              style={{background:'transparent',border:'none',padding:0,fontSize:17,fontWeight:600,fontFamily:'Syne',color:'var(--text)',borderBottom:'1px solid transparent',borderRadius:0,width:'100%'}}
+              onFocus={e=>e.target.style.borderBottomColor='var(--accent)'}
+              onBlur={e=>e.target.style.borderBottomColor='transparent'}/>
+            <div style={{fontSize:12,color:'var(--text2)',marginTop:4,display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>
+              Bewohner
+              <ScoreBadge score={score} onAdjust={()=>adjustScore(member.id,score>0?-1:1)}/>
+            </div>
           </div>
+          <button onClick={()=>remove(member.id)} style={{background:'none',border:'1px solid var(--danger)',borderRadius:7,cursor:'pointer',color:'var(--danger)',fontSize:12,padding:'5px 10px',fontFamily:'DM Sans',flexShrink:0}}>Ausziehen</button>
         </div>
-        <button onClick={()=>remove(member.id)} style={{background:'none',border:'1px solid var(--danger)',borderRadius:7,cursor:'pointer',color:'var(--danger)',fontSize:12,padding:'5px 10px',fontFamily:'DM Sans'}}>Ausziehen</button>
-      </div>
-      <ColorDropdown
-        value={member.color}
-        takenColors={members.filter(m=>m.id!==member.id).map(m=>m.color)}
-        onChange={c=>update(member.id,{color:c})}
-      />
-      <div style={{marginBottom:14}}>
-        <label>IBAN (optional)</label>
-        <input placeholder="DE00 0000 0000 0000 0000 00" value={member.iban||''} onChange={e=>update(member.id,{iban:e.target.value})}/>
-      </div>
-      <div>
-        <div className="flex items-center justify-between" style={{marginBottom:8}}>
-          <label style={{margin:0}}>Abwesenheiten</label>
-          <button className="btn btn-ghost btn-xs" onClick={()=>{setAbsModalFor(member.id);setAbsFrom('');setAbsTo('');}}>✈️ Urlaub eintragen</button>
+        <div style={{marginBottom:14}}>
+          <label>Farbe</label>
+          <ColorDropdown value={member.color} takenColors={members.filter(m=>m.id!==member.id).map(m=>m.color)} onChange={c=>update(member.id,{color:c})}/>
+        </div>
+        <div className="form-group">
+          <label>IBAN (optional)</label>
+          <input placeholder="DE00 0000 0000 0000 0000 00" value={member.iban||''} onChange={e=>update(member.id,{iban:e.target.value})}/>
         </div>
         <div>
-          {(member.absences||[]).length===0
-            ?<span style={{fontSize:12,color:'var(--text3)'}}>Keine Abwesenheiten</span>
-            :(member.absences||[]).map(abs=><div key={abs.id} className="absence-tag">
-                ✈️ {fmtShort(abs.from)} – {fmtShort(abs.to)}
-                <span className="tag-del" onClick={()=>removeAbsence(member.id,abs.id)}>✕</span>
-              </div>)
-          }
+          <div className="flex items-center justify-between" style={{marginBottom:8}}>
+            <label style={{margin:0}}>Abwesenheiten</label>
+            <button className="btn btn-ghost btn-xs" onClick={()=>{setAbsModalFor(member.id);setAbsFrom('');setAbsTo('');}}>✈️ Urlaub eintragen</button>
+          </div>
+          <div>
+            {!(member.absences?.length)?<span style={{fontSize:12,color:'var(--text3)'}}>Keine Abwesenheiten</span>
+            :member.absences.map(abs=><div key={abs.id} className="absence-tag">
+              ✈️ {fmtShort(abs.from)} – {fmtShort(abs.to)}
+              <span className="tag-del" onClick={()=>removeAbsence(member.id,abs.id)}>✕</span>
+            </div>)}
+          </div>
         </div>
-      </div>
-    </div>)}
+      </div>;
+    })}
     {showAdd&&<Modal title="🏠 Einziehen" onClose={()=>setShowAdd(false)}>
-      <div className="form-group">
-        <label>Name</label>
-        <input autoFocus placeholder="Name des neuen Mitbewohners" value={newName} onChange={e=>setNewName(e.target.value)} onKeyDown={e=>e.key==='Enter'&&add()}/>
-      </div>
-      <div className="form-group">
-        <label>Farbe wählen</label>
-        <ColorDropdown
-          value={newColor}
-          takenColors={members.map(m=>m.color)}
-          onChange={setNewColor}
-        />
-      </div>
+      <div className="form-group"><label>Name</label><input autoFocus placeholder="Name" value={newName} onChange={e=>setNewName(e.target.value)} onKeyDown={e=>e.key==='Enter'&&add()}/></div>
+      <div className="form-group"><label>Farbe</label><ColorDropdown value={newColor} takenColors={members.map(m=>m.color)} onChange={setNewColor}/></div>
       <div className="flex gap-2 mt-3">
         <button className="btn btn-ghost flex-1" onClick={()=>setShowAdd(false)}>Abbrechen</button>
         <button className="btn btn-primary flex-1" onClick={add}>Einziehen</button>
@@ -914,37 +802,34 @@ function Bewohner({members,setMembers,ausgleich,setAusgleich}) {
   </div>;
 }
 
-/* ═══ JOBS ═══ */
+/* ══ JOBS ══ */
 function Jobs({jobs,setJobs}) {
-  const [expanded,setExpanded] = useState(null);
-  const [showAdd,setShowAdd] = useState(false);
-  const [newName,setNewName] = useState('');
-  const [newFreq,setNewFreq] = useState('weekly');
-  const [newTask,setNewTask] = useState({});
-
-  function add() {
-    if(!newName.trim()) return;
+  const [expanded,setExpanded]=useState(null);
+  const [showAdd,setShowAdd]=useState(false);
+  const [newName,setNewName]=useState('');
+  const [newFreq,setNewFreq]=useState('weekly');
+  const [newTask,setNewTask]=useState({});
+  function add(){
+    if(!newName.trim())return;
     const id=uid();
     setJobs(prev=>[...prev,{id,name:newName.trim(),frequency:newFreq,tasks:[]}]);
-    setExpanded(id); setNewName(''); setNewFreq('weekly'); setShowAdd(false);
+    setExpanded(id);setNewName('');setNewFreq('weekly');setShowAdd(false);
   }
-  function del(id) { if(confirm('Job wirklich löschen?')){setJobs(prev=>prev.filter(j=>j.id!==id));if(expanded===id)setExpanded(null);} }
-  function update(id,changes) { setJobs(prev=>prev.map(j=>j.id===id?{...j,...changes}:j)); }
-  function addTask(jobId) {
-    const t=(newTask[jobId]||'').trim();
-    if(!t) return;
+  function del(id){if(confirm('Job wirklich löschen?')){setJobs(prev=>prev.filter(j=>j.id!==id));if(expanded===id)setExpanded(null);}}
+  function update(id,changes){setJobs(prev=>prev.map(j=>j.id===id?{...j,...changes}:j));}
+  function addTask(jobId){
+    const t=(newTask[jobId]||'').trim();if(!t)return;
     setJobs(prev=>prev.map(j=>j.id===jobId?{...j,tasks:[...(j.tasks||[]),t]}:j));
     setNewTask(prev=>({...prev,[jobId]:''}));
   }
-  function removeTask(jobId,i) { setJobs(prev=>prev.map(j=>j.id===jobId?{...j,tasks:j.tasks.filter((_,idx)=>idx!==i)}:j)); }
-
+  function removeTask(jobId,i){setJobs(prev=>prev.map(j=>j.id===jobId?{...j,tasks:j.tasks.filter((_,idx)=>idx!==i)}:j));}
   return <div>
     <div className="section-header">
       <h2 className="section-title">Jobs</h2>
       <button className="btn btn-primary btn-sm" onClick={()=>setShowAdd(true)}>+ Job</button>
     </div>
     <div style={{fontSize:13,color:'var(--text2)',marginBottom:14}}>Was zu jedem Putzjob gehört — von allen bearbeitbar.</div>
-    {jobs.length===0?<div className="empty">
+    {!jobs.length?<div className="empty">
       <div className="empty-icon">💼</div><div className="empty-text">Noch keine Jobs</div>
       <button className="btn btn-primary" style={{marginTop:16}} onClick={()=>setShowAdd(true)}>Ersten Job erstellen</button>
     </div>:jobs.map(job=>{
@@ -953,9 +838,7 @@ function Jobs({jobs,setJobs}) {
         <div className="job-card-header" onClick={()=>setExpanded(isOpen?null:job.id)}>
           <div style={{flex:1,minWidth:0}}>
             <div style={{fontSize:15,fontWeight:600}} className="truncate">{job.name}</div>
-            <div style={{fontSize:12,color:'var(--text2)',marginTop:2}}>
-              {(job.tasks||[]).length} Aufgabe{(job.tasks||[]).length!==1?'n':''} · {job.frequency==='monthly'?'🗓️ monatlich':'📅 wöchentlich'}
-            </div>
+            <div style={{fontSize:12,color:'var(--text2)',marginTop:2}}>{(job.tasks||[]).length} Aufgabe{(job.tasks||[]).length!==1?'n':''} · {job.frequency==='monthly'?'🗓️ monatlich':'📅 wöchentlich'}</div>
           </div>
           <button onClick={e=>{e.stopPropagation();del(job.id);}} style={{background:'none',border:'none',cursor:'pointer',color:'var(--text3)',fontSize:16,padding:'4px',marginRight:4}}>🗑️</button>
           <span style={{color:'var(--text2)',fontSize:12}}>{isOpen?'▲':'▼'}</span>
@@ -972,11 +855,11 @@ function Jobs({jobs,setJobs}) {
           <div>
             <label>Aufgaben</label>
             {(job.tasks||[]).map((task,i)=><div key={i} style={{display:'flex',alignItems:'center',gap:8,padding:'7px 0',borderBottom:'1px solid var(--border)'}}>
-              <span style={{color:'var(--accent)',fontSize:16,lineHeight:1}}>·</span>
+              <span style={{color:'var(--accent)',fontSize:16}}>·</span>
               <span style={{flex:1,fontSize:13}}>{task}</span>
               <button onClick={()=>removeTask(job.id,i)} style={{background:'none',border:'none',cursor:'pointer',color:'var(--text3)',fontSize:14,padding:'2px 4px'}}>✕</button>
             </div>)}
-            <div className="flex gap-2 mt-2">
+            <div className="flex gap-2" style={{marginTop:8}}>
               <input placeholder="Aufgabe hinzufügen …" value={newTask[job.id]||''} onChange={e=>setNewTask(prev=>({...prev,[job.id]:e.target.value}))} onKeyDown={e=>e.key==='Enter'&&addTask(job.id)} style={{flex:1}}/>
               <button className="btn btn-ghost btn-sm" onClick={()=>addTask(job.id)}>+</button>
             </div>
@@ -1001,111 +884,32 @@ function Jobs({jobs,setJobs}) {
   </div>;
 }
 
-/* ═══ PIN SCREEN ═══ */
-function PinScreen({onUnlock, isSetup, existingPin}) {
-  const [input, setInput] = React.useState('');
-  const [confirm, setConfirm] = React.useState('');
-  const [step, setStep] = React.useState('enter'); // 'enter' | 'confirm'
-  const [error, setError] = React.useState('');
-  const [shake, setShake] = React.useState(false);
-
-  const PIN_LENGTH = 4;
-
-  function triggerError(msg) {
-    setError(msg);
-    setShake(true);
-    setTimeout(() => { setShake(false); setInput(''); }, 600);
-  }
-
-  function handleKey(k) {
-    if (k === 'del') {
-      setInput(p => p.slice(0,-1));
-      setError('');
-      return;
-    }
-    const next = input + k;
-    if (next.length > PIN_LENGTH) return;
-    setInput(next);
-
-    if (next.length === PIN_LENGTH) {
-      setTimeout(() => {
-        if (isSetup) {
-          if (step === 'enter') {
-            setConfirm(next);
-            setInput('');
-            setStep('confirm');
-          } else {
-            if (next === confirm) {
-              onUnlock(next);
-            } else {
-              triggerError('PINs stimmen nicht überein');
-              setStep('enter');
-              setConfirm('');
-            }
-          }
-        } else {
-          if (next === existingPin) {
-            onUnlock(next);
-          } else {
-            triggerError('Falscher PIN');
-          }
-        }
-      }, 100);
-    }
-  }
-
-  const keys = ['1','2','3','4','5','6','7','8','9','empty','0','del'];
-  const displayInput = isSetup && step === 'confirm' ? input : input;
-
-  return <div className="pin-screen">
-    <div className="pin-logo">🏠 WG Eifelwall</div>
-    <div className="pin-subtitle">
-      {isSetup ? 'PIN einrichten' : 'PIN eingeben'}
-    </div>
-
-    {isSetup && <div className="pin-setup-label">
-      {step === 'enter'
-        ? 'Lege einen 4-stelligen PIN fest für die ganze WG.'
-        : 'PIN zur Bestätigung nochmal eingeben.'}
-    </div>}
-
-    <div className="pin-dots">
-      {Array.from({length: PIN_LENGTH}).map((_,i) => (
-        <div key={i} className={`pin-dot ${i < displayInput.length ? (shake ? 'error' : 'filled') : ''}`} />
-      ))}
-    </div>
-
-    <div className="pin-error-msg">{error}</div>
-
-    <div className="pin-grid">
-      {keys.map((k,i) => (
-        <div key={i}
-          className={`pin-key ${k==='del'?'del':''} ${k==='empty'?'empty':''}`}
-          onClick={() => k !== 'empty' && handleKey(k)}
-        >
-          {k === 'del' ? '⌫' : k === 'empty' ? '' : k}
-        </div>
-      ))}
-    </div>
-  </div>;
-}
-
-/* ═══ APP ROOT ═══ */
+/* ══ APP ROOT ══ */
 function App() {
-  const [tab,setRawTab] = useState('dashboard');
-  function setTab(t) { setRawTab(t); setTimeout(()=>document.querySelector('.content')?.scrollTo(0,0),0); }
-  const [unlocked, setUnlocked] = useState(false);
-  const [members, setMembers, loadingM, syncingM] = useFirebase('members', DEFAULT_MEMBERS);
-  const [jobs,    setJobs,    loadingJ, syncingJ] = useFirebase('jobs',    DEFAULT_JOBS);
-  const [cleaningDone, setCleaningDone, loadingC] = useFirebase('cleaningDone', {});
-  const [purchases,    setPurchases,    loadingP] = useFirebase('purchases',    []);
-  const [pins,         setPins,         loadingPi]  = useFirebase('pins',         []);
-  const [appPin,       setAppPin,       loadingPin] = useFirebase('appPin',       'unset');
-  const [ausgleich,    setAusgleich,    loadingA]   = useFirebase('ausgleich',    {});
-  const [processedWks, setProcessedWks, loadingPW]  = useFirebase('processedWeeks', {});
+  const [tab,setRawTab]=useState('dashboard');
+  const [unlocked,setUnlocked]=useState(false);
+  function setTab(t){setRawTab(t);setTimeout(()=>document.querySelector('.content')?.scrollTo(0,0),0);}
 
-  const loading = loadingM||loadingJ||loadingC||loadingP||loadingPi||loadingPin||loadingA||loadingPW;
+  const [members,     setMembers,     loadingM, syncingM] = useFirebase('members',       DEFAULT_MEMBERS);
+  const [jobs,        setJobs,        loadingJ, syncingJ] = useFirebase('jobs',          DEFAULT_JOBS);
+  const [cleaningDone,setCleaningDone,loadingC]           = useFirebase('cleaningDone',  {});
+  const [purchases,   setPurchases,   loadingP]           = useFirebase('purchases',     []);
+  const [pins,        setPins,        loadingPi]          = useFirebase('pins',          []);
+  const [appPin,      setAppPin,      loadingPin]         = useFirebase('appPin',        'unset');
+  const [scores,      setScores,      loadingS]           = useFirebase('scores',        {});
+  const [lastProcessed,setLastProcessed,loadingLP]        = useFirebase('lastProcessed', null);
+
+  const loading = loadingM||loadingJ||loadingC||loadingP||loadingPi||loadingPin||loadingS||loadingLP;
   const syncing = syncingM||syncingJ;
+
+  // Process scores once on startup when all data is loaded
+  const processedRef = useRef(false);
+  useEffect(() => {
+    if (loading || processedRef.current) return;
+    if (!members.length || !jobs.length) return;
+    processedRef.current = true;
+    processScores(jobs, members, cleaningDone, scores, lastProcessed, setScores, setLastProcessed);
+  }, [loading]);
 
   const tabs = [
     {id:'dashboard',icon:'🏠',label:'Home'},
@@ -1115,24 +919,17 @@ function App() {
     {id:'jobs',     icon:'💼',label:'Jobs'},
   ];
 
-  const openPurchases = purchases.filter(p=>!p.done).length;
   const todayWeekKey = getWeekKey(new Date());
-  const todayAssignments = getAssignments(jobs,members,todayWeekKey,ausgleich);
-  const weekDone = cleaningDone[todayWeekKey]||{};
-  const pendingJobs = todayAssignments.filter(a=>!weekDone[a.jobId]).length;
+  const todayAssignments = getAssignments(jobs, members, todayWeekKey, scores);
+  const todayDone = (cleaningDone||{})[todayWeekKey]||{};
+  const pendingJobs = todayAssignments.filter(a=>!todayDone[a.jobId]).length;
+  const openPurchases = (purchases||[]).filter(p=>!p.done).length;
 
-  if(loading) return <div className="loading-screen">
-    <div className="loading-spinner"/>
-    <div style={{fontSize:13,color:'var(--text2)'}}>WG wird geladen …</div>
-  </div>;
+  if (loading) return <div className="loading-screen"><div className="loading-spinner"/><div style={{fontSize:13,color:'var(--text2)'}}>WG wird geladen …</div></div>;
 
-  // PIN gate
   if (!unlocked) {
-    if (appPin === 'unset') {
-      // First time: setup PIN
-      return <PinScreen isSetup={true} onUnlock={pin => { setAppPin(pin); setUnlocked(true); setTimeout(()=>document.querySelector('.content')?.scrollTo(0,0),50); }} />;
-    }
-    return <PinScreen isSetup={false} existingPin={appPin} onUnlock={() => { setUnlocked(true); setTimeout(()=>document.querySelector('.content')?.scrollTo(0,0),50); }} />;
+    if (appPin==='unset') return <PinScreen isSetup={true} onUnlock={pin=>{setAppPin(pin);setUnlocked(true);}}/>;
+    return <PinScreen isSetup={false} existingPin={appPin} onUnlock={()=>setUnlocked(true)}/>;
   }
 
   const today = new Date().toLocaleDateString('de-DE',{weekday:'long',day:'2-digit',month:'short'});
@@ -1141,15 +938,15 @@ function App() {
     <div className="app-header">
       <div className="app-logo">🏠 WG Eifelwall</div>
       <div className="flex items-center gap-2">
-        <div className={`sync-dot ${syncing?'syncing':''}`} title={syncing?'Speichert …':'Alles gespeichert'}/>
+        <div className={`sync-dot ${syncing?'syncing':''}`} title={syncing?'Speichert …':'Gespeichert'}/>
         <div className="app-date">{today}</div>
       </div>
     </div>
     <div className="content">
-      {tab==='dashboard'&&<Dashboard members={members} jobs={jobs} cleaningDone={cleaningDone} purchases={purchases} pins={pins} setPins={setPins} ausgleich={ausgleich} setActiveTab={setTab}/>}
-      {tab==='putzplan' &&<Putzplan  members={members} jobs={jobs} cleaningDone={cleaningDone} setCleaningDone={setCleaningDone} ausgleich={ausgleich} setAusgleich={setAusgleich} processedWks={processedWks} setProcessedWks={setProcessedWks}/>}
+      {tab==='dashboard'&&<Dashboard members={members} jobs={jobs} cleaningDone={cleaningDone} purchases={purchases} pins={pins} setPins={setPins} scores={scores} setActiveTab={setTab}/>}
+      {tab==='putzplan' &&<Putzplan  members={members} jobs={jobs} cleaningDone={cleaningDone} setCleaningDone={setCleaningDone} scores={scores}/>}
       {tab==='einkaufe' &&<WGEinkaufe members={members} purchases={purchases} setPurchases={setPurchases}/>}
-      {tab==='bewohner' &&<Bewohner  members={members} setMembers={setMembers} ausgleich={ausgleich} setAusgleich={setAusgleich}/>}
+      {tab==='bewohner' &&<Bewohner  members={members} setMembers={setMembers} scores={scores} setScores={setScores}/>}
       {tab==='jobs'     &&<Jobs      jobs={jobs} setJobs={setJobs}/>}
     </div>
     <div className="bottom-nav">
