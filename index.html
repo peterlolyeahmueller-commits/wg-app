@@ -184,6 +184,9 @@ function isMemberAway(member, weekKey) {
 
 /* ══ DEFAULTS ══ */
 const COLORS = ['#f59e0b','#ef4444','#3b82f6','#10b981','#8b5cf6','#f97316','#06b6d4','#ec4899'];
+
+// The app started on this date — no scores or jobs are processed before this
+const APP_START_DATE = parseLocal('2026-03-16');
 const DEFAULT_MEMBERS = [
   {id:'m1',name:'Alex',color:'#f59e0b',iban:'',absences:[]},
   {id:'m2',name:'Lena',color:'#ef4444',iban:'',absences:[]},
@@ -283,16 +286,16 @@ function processScores(jobs, members, cleaningDone, scores, lastProcessed, setSc
   if (!members.length || !jobs.length) return;
   const lastSunday = getLastSunday();
   const lastProcessedDate = lastProcessed ? parseLocal(lastProcessed) : null;
-  // Collect Sundays to process (oldest first), max 12 weeks back
+  // Collect Sundays to process (oldest first), never before APP_START_DATE
   const toProcess = [];
   let cur = new Date(lastSunday);
-  const limit = new Date(lastSunday); limit.setDate(limit.getDate()-84);
   while (true) {
     if (lastProcessedDate && cur <= lastProcessedDate) break;
-    if (cur < limit) break;
+    // Never process weeks before the app started
+    const weekMon = addDays(cur, -6);
+    if (weekMon < APP_START_DATE) break;
     toProcess.unshift(new Date(cur));
     cur.setDate(cur.getDate()-7);
-    if (!lastProcessedDate && toProcess.length>=12) break;
   }
   if (!toProcess.length) return;
 
@@ -569,18 +572,23 @@ function Putzplan({members,jobs,cleaningDone,setCleaningDone,scores}) {
     </div>
     {view==='woche'?<>
       <div className="week-nav">
-        <button className="icon-btn" onClick={()=>navWeek(-1)}>←</button>
+        <button className="icon-btn" onClick={()=>navWeek(-1)} style={{opacity:monday<APP_START_DATE?0.3:1,pointerEvents:monday<APP_START_DATE?'none':'auto'}}>←</button>
         <div style={{textAlign:'center'}}>
           <div className="week-label">{fmtShort(monday)} – {fmtShort(sunday)}</div>
           {isCurrentWeek&&<div style={{fontSize:10,color:'var(--accent)',marginTop:1}}>Diese Woche</div>}
         </div>
         <button className="icon-btn" onClick={()=>navWeek(1)}>→</button>
       </div>
-      {awayThisWeek.length>0&&<div style={{marginBottom:12,padding:'8px 12px',background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:10,display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
+      {monday<APP_START_DATE&&<div style={{textAlign:'center',padding:'40px 20px',color:'var(--text2)'}}>
+        <div style={{fontSize:32,marginBottom:10}}>📅</div>
+        <div style={{fontSize:14}}>Die App startete am {fmtShort(APP_START_DATE)}.</div>
+        <div style={{fontSize:12,marginTop:4,color:'var(--text3)'}}>Für frühere Wochen gibt es keine Daten.</div>
+      </div>}
+      {monday>=APP_START_DATE&&awayThisWeek.length>0&&<div style={{marginBottom:12,padding:'8px 12px',background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:10,display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
         <span style={{fontSize:12,color:'var(--text2)'}}>✈️ Weg:</span>
         {awayThisWeek.map(m=><span key={m.id} style={{fontSize:12,color:m.color,fontWeight:500}}>{m.name}</span>)}
       </div>}
-      {jobs.length===0?<div className="empty"><div className="empty-icon">💼</div><div className="empty-text">Lege zuerst Jobs an.</div></div>
+      {monday>=APP_START_DATE&&(jobs.length===0?<div className="empty"><div className="empty-icon">💼</div><div className="empty-text">Lege zuerst Jobs an.</div></div>
       :members.length===0?<div className="empty"><div className="empty-icon">👥</div><div className="empty-text">Füge Bewohner hinzu.</div></div>
       :<div className="card" style={{padding:0,overflow:'hidden'}}>
         {assignments.map((a,i)=>{
@@ -606,7 +614,7 @@ function Putzplan({members,jobs,cleaningDone,setCleaningDone,scores}) {
             <Avatar member={member} size={30}/>
           </div>;
         })}
-      </div>}
+      </div>)}
     </>:<>
       <div className="week-nav">
         <button className="icon-btn" onClick={()=>navMonth(-1)}>←</button>
