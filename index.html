@@ -181,14 +181,17 @@ function weekNumber(wk) {
 }
 function isMemberAway(member, weekKey) {
   const mon = parseLocal(weekKey), sun = addDays(mon, 6);
+  const thu = addDays(mon, 3); // Thursday of this week
   return (member.absences||[]).some(a => {
     const f = parseLocal(a.from), t = parseLocal(a.to);
     if (f > sun || t < mon) return false; // no overlap at all
-    // Count overlapping days in this week (Mon–Sun)
+    // Count overlapping days in this week
     const overlapStart = f < mon ? mon : f;
     const overlapEnd   = t > sun ? sun : t;
     const days = Math.round((overlapEnd - overlapStart) / 86400000) + 1;
-    return days >= 4; // absent only if away 4+ days (Thu or more)
+    // Absent only if: away 4+ days AND absence starts before Thursday
+    // (starting Thu or later means Mon–Wed were available → job can be done)
+    return days >= 4 && overlapStart < thu;
   });
 }
 
