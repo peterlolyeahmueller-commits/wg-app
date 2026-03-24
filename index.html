@@ -166,7 +166,9 @@ function getWeekKey(d) {
 }
 function getLastSunday(from = new Date()) {
   const d = new Date(from); d.setHours(0,0,0,0);
-  d.setDate(d.getDate() - d.getDay());
+  // If today is Sunday (day=0), go back 7 days — current week isn't over yet
+  const daysBack = d.getDay() === 0 ? 7 : d.getDay();
+  d.setDate(d.getDate() - daysBack);
   return d;
 }
 function fmtShort(d) { return parseLocal(d).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'}); }
@@ -174,8 +176,8 @@ function fmtMonthYear(d) { return parseLocal(d).toLocaleDateString('de-DE',{mont
 function uid() { return Date.now().toString(36)+Math.random().toString(36).slice(2); }
 function weekNumber(wk) {
   const d = parseLocal(wk);
-  const jan1 = new Date(d.getFullYear(),0,1);
-  return Math.ceil(((d-jan1)/86400000+jan1.getDay()+1)/7);
+  const jan1 = new Date(d.getFullYear(), 0, 1);
+  return Math.ceil(((d - jan1) / 86400000 + jan1.getDay() + 1) / 7);
 }
 function isMemberAway(member, weekKey) {
   const mon = parseLocal(weekKey), sun = addDays(mon, 6);
@@ -290,7 +292,7 @@ function simulateNormalShare(jobs, members, weekKey, memberId) {
    - Present member who did extra jobs (beyond their normal share): -1 per extra job done
    - Present member who did only their normal share: no change
 */
-function processScores(jobs, members, cleaningDone, scores, lastProcessed, setScores, setLastProcessed) {
+function processScores(jobs, members, scores, lastProcessed, setScores, setLastProcessed) {
   if (!members.length || !jobs.length) return;
   const lastSunday = getLastSunday();
   const lastProcessedDate = lastProcessed ? parseLocal(lastProcessed) : null;
@@ -310,27 +312,26 @@ function processScores(jobs, members, cleaningDone, scores, lastProcessed, setSc
   let newScores = {...(scores||{})};
 
   toProcess.forEach(sunday => {
-    // Week that ended on this Sunday
-    const weekKey = getWeekKey(addDays(sunday,-6));
-    const done = (cleaningDone||{})[weekKey]||{};
+    const weekKey = getWeekKey(addDays(sunday, -6));
     const activeJobs = getActiveJobs(jobs, members.length, weekKey);
     if (!activeJobs.length) return;
+
+    // We assume ALL assigned jobs were completed — no done-tracking needed
     const realAssignments = getAssignments(jobs, members, weekKey, newScores);
 
     members.forEach(member => {
       if (isMemberAway(member, weekKey)) {
-        // How many jobs would they have gotten?
+        // +N: how many jobs they would have gotten if present (simulation, no score influence)
         const wouldHave = simulateNormalShare(jobs, members, weekKey, member.id);
         newScores[member.id] = (newScores[member.id]||0) + wouldHave;
       } else {
-        // How many were assigned to them, and how many did they do?
-        const myJobs = realAssignments.filter(a => a.memberId===member.id);
-        const myDone = myJobs.filter(a => done[a.jobId]).length;
-        // Their normal share (if everyone present)
+        // How many jobs were assigned to them this week
+        const assigned = realAssignments.filter(a => a.memberId === member.id).length;
+        // Their normal share if everyone had been present
         const normalShare = simulateNormalShare(jobs, members, weekKey, member.id);
-        // Extra = assigned more than normal (because others absent), and actually done
-        const extraDone = Math.max(0, myDone - normalShare);
-        if (extraDone > 0) newScores[member.id] = (newScores[member.id]||0) - extraDone;
+        // -1 per extra job (assigned more than baseline because others were away)
+        const extra = Math.max(0, assigned - normalShare);
+        if (extra > 0) newScores[member.id] = (newScores[member.id]||0) - extra;
       }
     });
   });
@@ -605,9 +606,12 @@ function Putzplan({members,jobs,cleaningDone,setCleaningDone,scores}) {
           const done=weekDone[a.jobId]||false;
           if(!job)return null;
           if(!member)return <div key={a.jobId} style={{padding:'15px 16px',borderBottom:i<assignments.length-1?'1px solid var(--border)':'none',fontSize:14,color:'var(--text2)'}}>{job.name} — <span style={{color:'var(--accent)'}}>niemand verfügbar</span></div>;
+          // Pre-compute once per member: their jobs in order, their normal share
+          const memberJobs=assignments.filter(x=>x.memberId===member.id);
           const normalShare=simulateNormalShare(jobs,members,weekKey,member.id);
-          const assignedCount=assignments.filter(x=>x.memberId===member.id).length;
-          const isExtra=assignedCount>normalShare&&assignments.filter(x=>x.memberId===member.id).findIndex(x=>x.jobId===a.jobId)===assignedCount-1;
+          const jobIndexForMember=memberJobs.findIndex(x=>x.jobId===a.jobId);
+          // Extra = this job's position in member's list is >= their normal share
+          const isExtra=jobIndexForMember>=normalShare;
           const memberScore=(scores||{})[member.id]||0;
           return <div key={a.jobId} style={{display:'flex',alignItems:'center',gap:14,padding:'15px 16px',borderBottom:i<assignments.length-1?'1px solid var(--border)':'none',background:done?'rgba(34,197,94,0.05)':'transparent',transition:'background 0.2s'}}>
             <CheckBox checked={done} onChange={()=>toggle(a.jobId)} color={member.color}/>
@@ -615,8 +619,8 @@ function Putzplan({members,jobs,cleaningDone,setCleaningDone,scores}) {
               <div style={{fontSize:15,fontWeight:500,textDecoration:done?'line-through':'none',color:done?'var(--text2)':'var(--text)'}}>{job.name}</div>
               <div style={{display:'flex',gap:5,marginTop:2,flexWrap:'wrap'}}>
                 {job.frequency==='monthly'&&<span style={{fontSize:11,color:'var(--accent)',fontWeight:500}}>monatlich</span>}
+                {isExtra&&memberScore>0&&<span style={{fontSize:11,color:'var(--accent)'}}>↩️ Ausgleichs-Job</span>}
                 {isExtra&&memberScore<=0&&<span style={{fontSize:11,color:'var(--success)'}}>⭐ Extra-Job</span>}
-                {memberScore>0&&<span style={{fontSize:11,color:'var(--accent)'}}>↩️ Ausgleichs-Job</span>}
               </div>
             </div>
             <Avatar member={member} size={30}/>
@@ -723,7 +727,7 @@ function WGEinkaufe({members,purchases,setPurchases}) {
 }
 
 /* ══ BEWOHNER ══ */
-function Bewohner({members,setMembers,scores,setScores}) {
+function Bewohner({members,setMembers,scores,setScores,absTotal,setAbsTotal}) {
   const [showAdd,setShowAdd]=useState(false);
   const [newName,setNewName]=useState('');
   const [newColor,setNewColor]=useState(COLORS[0]);
@@ -749,7 +753,22 @@ function Bewohner({members,setMembers,scores,setScores}) {
     setMembers(prev=>prev.map(m=>m.id===memberId?{...m,absences:[...(m.absences||[]),{id:uid(),from:absFrom,to:absTo}]}:m));
     setAbsFrom('');setAbsTo('');setAbsModalFor(null);
   }
-  function removeAbsence(memberId,absId){setMembers(prev=>prev.map(m=>m.id===memberId?{...m,absences:m.absences.filter(a=>a.id!==absId)}:m));}
+  function removeAbsence(memberId,absId) {
+    const member = members.find(m=>m.id===memberId);
+    const abs = member?.absences?.find(a=>a.id===absId);
+    if (abs) {
+      const today = new Date(); today.setHours(0,0,0,0);
+      const cutoff = new Date(today); cutoff.setDate(cutoff.getDate()-1);
+      const to = parseLocal(abs.to);
+      // Only count days if the absence already ended (past weeks)
+      if (to < cutoff) {
+        const from = parseLocal(abs.from);
+        const days = Math.round((to - from) / 86400000) + 1;
+        setAbsTotal(prev=>({...prev,[memberId]:(prev[memberId]||0)+days}));
+      }
+    }
+    setMembers(prev=>prev.map(m=>m.id===memberId?{...m,absences:m.absences.filter(a=>a.id!==absId)}:m));
+  }
   function adjustScore(memberId,delta){setScores(prev=>({...prev,[memberId]:(prev[memberId]||0)+delta}));}
   return <div>
     <div className="section-header">
@@ -787,13 +806,19 @@ function Bewohner({members,setMembers,scores,setScores}) {
             <label style={{margin:0}}>Abwesenheiten</label>
             <button className="btn btn-ghost btn-xs" onClick={()=>{setAbsModalFor(member.id);setAbsFrom('');setAbsTo('');}}>✈️ Urlaub eintragen</button>
           </div>
-          <div>
-            {!(member.absences?.length)?<span style={{fontSize:12,color:'var(--text3)'}}>Keine Abwesenheiten</span>
+          <div style={{marginBottom:8}}>
+            {!(member.absences?.length)?<span style={{fontSize:12,color:'var(--text3)'}}>Keine aktuellen Abwesenheiten</span>
             :member.absences.map(abs=><div key={abs.id} className="absence-tag">
               ✈️ {fmtShort(abs.from)} – {fmtShort(abs.to)}
               <span className="tag-del" onClick={()=>removeAbsence(member.id,abs.id)}>✕</span>
             </div>)}
           </div>
+          {((absTotal||{})[member.id]||0) > 0 && (
+            <div style={{fontSize:12,color:'var(--text2)',display:'flex',alignItems:'center',gap:5}}>
+              <span style={{color:'var(--text3)'}}>📅</span>
+              <span>Gesamt abwesend: <span style={{color:'var(--text)',fontWeight:500}}>{(absTotal||{})[member.id]} Tag{(absTotal||{})[member.id]!==1?'e':''}</span></span>
+            </div>
+          )}
         </div>
       </div>;
     })}
@@ -914,17 +939,53 @@ function App() {
   const [appPin,      setAppPin,      loadingPin]         = useFirebase('appPin',        'unset');
   const [scores,      setScores,      loadingS]           = useFirebase('scores',        {});
   const [lastProcessed,setLastProcessed,loadingLP]        = useFirebase('lastProcessed', null);
+  const [absTotal,    setAbsTotal,    loadingAT]          = useFirebase('absenceDaysTotal', {});
 
-  const loading = loadingM||loadingJ||loadingC||loadingP||loadingPi||loadingPin||loadingS||loadingLP;
+  const loading = loadingM||loadingJ||loadingC||loadingP||loadingPi||loadingPin||loadingS||loadingLP||loadingAT;
   const syncing = syncingM||syncingJ;
 
-  // Process scores once on startup when all data is loaded
+  // On startup: auto-cleanup expired absences + process scores
   const processedRef = useRef(false);
   useEffect(() => {
     if (loading || processedRef.current) return;
     if (!members.length || !jobs.length) return;
     processedRef.current = true;
-    processScores(jobs, members, cleaningDone, scores, lastProcessed, setScores, setLastProcessed);
+
+    // Auto-delete absences that ended more than 1 day ago
+    // and accumulate days into the register
+    const today = new Date(); today.setHours(0,0,0,0);
+    const cutoff = new Date(today); cutoff.setDate(cutoff.getDate() - 1);
+
+    let absChanged = false;
+    const newAbsTotal = {...(absTotal||{})};
+    const newMembers = members.map(member => {
+      const remaining = [];
+      (member.absences||[]).forEach(abs => {
+        const to = parseLocal(abs.to);
+        if (to < cutoff) {
+          // Expired: add days to register
+          const from = parseLocal(abs.from);
+          const days = Math.round((to - from) / 86400000) + 1;
+          newAbsTotal[member.id] = (newAbsTotal[member.id]||0) + days;
+          absChanged = true;
+        } else {
+          remaining.push(abs);
+        }
+      });
+      if (remaining.length !== (member.absences||[]).length) {
+        absChanged = true;
+        return {...member, absences: remaining};
+      }
+      return member;
+    });
+
+    if (absChanged) {
+      setMembers(newMembers);
+      setAbsTotal(newAbsTotal);
+    }
+
+    // Process scores for completed weeks
+    processScores(jobs, newMembers, scores, lastProcessed, setScores, setLastProcessed);
   }, [loading]);
 
   const tabs = [
@@ -962,7 +1023,7 @@ function App() {
       {tab==='dashboard'&&<Dashboard members={members} jobs={jobs} cleaningDone={cleaningDone} purchases={purchases} pins={pins} setPins={setPins} scores={scores} setActiveTab={setTab}/>}
       {tab==='putzplan' &&<Putzplan  members={members} jobs={jobs} cleaningDone={cleaningDone} setCleaningDone={setCleaningDone} scores={scores}/>}
       {tab==='einkaufe' &&<WGEinkaufe members={members} purchases={purchases} setPurchases={setPurchases}/>}
-      {tab==='bewohner' &&<Bewohner  members={members} setMembers={setMembers} scores={scores} setScores={setScores}/>}
+      {tab==='bewohner' &&<Bewohner  members={members} setMembers={setMembers} scores={scores} setScores={setScores} absTotal={absTotal} setAbsTotal={setAbsTotal}/>}
       {tab==='jobs'     &&<Jobs      jobs={jobs} setJobs={setJobs}/>}
     </div>
     <div className="bottom-nav">
