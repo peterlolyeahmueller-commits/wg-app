@@ -120,6 +120,7 @@
     .score-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 6px; }
     .score-badge.debt { background: rgba(245,158,11,0.12); color: var(--accent); }
     .score-badge.credit { background: rgba(34,197,94,0.12); color: var(--success); }
+    .score-badge.even { background: rgba(255,255,255,0.06); color: var(--text2); }
     .empty { text-align: center; padding: 50px 20px; color: var(--text2); }
     .empty-icon { font-size: 44px; margin-bottom: 12px; }
     .empty-text { font-size: 14px; }
@@ -382,13 +383,27 @@ function ColorDropdown({value,takenColors,onChange}) {
     </div>}
   </div>;
 }
-function ScoreBadge({score,onAdjust}) {
-  if (!score || score===0) return null;
-  const isDebt = score>0;
-  return <span className={`score-badge ${isDebt?'debt':'credit'}`}>
-    {isDebt?`↩️ ${score} Ausgleich`:`⭐ ${Math.abs(score)} Guthaben`}
-    <span style={{cursor:'pointer',opacity:0.7,fontSize:12,marginLeft:2}} onClick={e=>{e.stopPropagation();if(confirm(`${isDebt?'Ausgleich':'Guthaben'} manuell um 1 anpassen?`))onAdjust();}}>✕</span>
-  </span>;
+function ScoreBadge({score, onIncrease, onDecrease}) {
+  const isDebt = score > 0;
+  const isCredit = score < 0;
+  const label = isDebt
+    ? `↩️ ${score} Ausgleich`
+    : isCredit
+    ? `⭐ ${Math.abs(score)} Guthaben`
+    : '✓ Ausgeglichen';
+  const cls = isDebt ? 'debt' : isCredit ? 'credit' : 'even';
+  const btnStyle = {
+    background: 'none', border: 'none', cursor: 'pointer',
+    fontSize: 14, lineHeight: 1, padding: '0 3px',
+    color: 'inherit', opacity: 0.7, fontWeight: 700,
+  };
+  return (
+    <span className={`score-badge ${cls}`}>
+      <span style={btnStyle} onClick={e=>{e.stopPropagation();onDecrease();}}>−</span>
+      {label}
+      <span style={btnStyle} onClick={e=>{e.stopPropagation();onIncrease();}}>+</span>
+    </span>
+  );
 }
 
 /* ══ PIN SCREEN ══ */
@@ -800,7 +815,7 @@ function Bewohner({members,setMembers,scores,setScores,absTotal,setAbsTotal}) {
               onBlur={e=>e.target.style.borderBottomColor='transparent'}/>
             <div style={{fontSize:12,color:'var(--text2)',marginTop:4,display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>
               Bewohner
-              <ScoreBadge score={score} onAdjust={()=>adjustScore(member.id,score>0?-1:1)}/>
+              <ScoreBadge score={score} onIncrease={()=>adjustScore(member.id,1)} onDecrease={()=>adjustScore(member.id,-1)}/>
             </div>
           </div>
           <button onClick={()=>remove(member.id)} style={{background:'none',border:'1px solid var(--danger)',borderRadius:7,cursor:'pointer',color:'var(--danger)',fontSize:12,padding:'5px 10px',fontFamily:'DM Sans',flexShrink:0}}>Ausziehen</button>
